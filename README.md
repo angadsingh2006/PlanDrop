@@ -1,5 +1,7 @@
 # PlanDrop
 
+**Live demo:** [plandrop-1.vercel.app](https://plandrop-1.vercel.app/)
+
 **Friend-group activities, first come first served.** Pick your area, browse a live pool of AI-made plans, claim one before another group does, then share the link so everyone sees the same itinerary—no more “what do you want to do?” loops.
 
 Hackathon 2026 · built in 12 hours.
@@ -20,9 +22,17 @@ Group planning often stalls on empty calendars and vague ideas. PlanDrop gives *
 4. Share the link so friends see the full outing.
 5. Show up and enjoy.
 
+## What we built (specifics)
+
+- **Browse by place:** city / ZIP search with radius, optional geolocation, and Google Places–backed suggestions so the drop matches where people actually are.
+- **Live plan pool:** plans live in Supabase (`plan_live`) with **Realtime** so when someone claims or releases a plan, everyone browsing the grid sees it update without refreshing.
+- **Claim flow:** anonymous browser sessions can claim, unclaim, and revisit **Your claims**; shareable **`/go/[planId]`** pages give the group one canonical itinerary (stops, vibe, timing cues, map links).
+- **Polished surface:** landing hero with a scrolling marquee of real venues and photos, vibe tags (chill / active / foodie / adventurous), static map previews, and API routes for autocomplete, reverse geocode, place photos, and AI plan generation (Claude) feeding the pool.
+- **MVP boundaries:** no accounts or payments in the demo—focus is **claim → share → show up**, not bookings.
+
 ## Tech
 
-Next.js, Supabase, Claude, deployed on Vercel. Anonymous sessions—no accounts required for the demo.
+Next.js (App Router), Supabase (Postgres + Realtime), Claude, Tailwind, deployed on **Vercel**. Anonymous sessions—no accounts required for the demo.
 
 ## What to know
 
