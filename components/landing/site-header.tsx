@@ -1,38 +1,62 @@
 import Link from "next/link";
 
+function LogoMark({ className }: { className?: string }) {
+  return (
+    <span className={`flex items-center gap-2 ${className ?? ""}`}>
+      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-brand text-white shadow-sm">
+        <svg
+          className="h-4 w-4"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          aria-hidden
+        >
+          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+        </svg>
+      </span>
+      <span className="font-display text-xl font-bold tracking-tight text-brand">
+        PlanDrop
+      </span>
+    </span>
+  );
+}
+
 export function SiteHeader() {
   return (
-    <header className="sticky top-0 z-50 border-b border-zinc-100 bg-white/80 backdrop-blur-md">
-      <div className="mx-auto flex h-[72px] max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        <Link
-          href="/"
-          className="flex items-center gap-1 text-2xl font-bold tracking-tight text-brand"
-        >
-          <span aria-hidden>📍</span>
-          <span>PlanDrop</span>
+    <header className="sticky top-0 z-50 border-b border-zinc-100 bg-white/90 backdrop-blur-md">
+      <div className="mx-auto flex h-[72px] max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+        <Link href="/" className="shrink-0">
+          <LogoMark />
         </Link>
 
-        <nav className="hidden items-center gap-8 md:flex">
-          <Link
-            href="#plans"
-            className="text-sm font-medium text-zinc-600 underline decoration-transparent underline-offset-4 transition hover:text-zinc-900 hover:decoration-zinc-300"
-          >
-            Plans
-          </Link>
-          <Link
-            href="#how-it-works"
-            className="text-sm font-medium text-zinc-600 underline decoration-transparent underline-offset-4 transition hover:text-zinc-900 hover:decoration-zinc-300"
-          >
-            How it works
-          </Link>
+        <nav className="hidden items-center gap-8 lg:flex">
+          {[
+            ["#how-it-works", "How it works"],
+            ["#plans", "Browse Plans"],
+            ["#for-groups", "For groups"],
+          ].map(([href, label]) => (
+            <Link
+              key={href}
+              href={href}
+              className="text-sm font-medium text-zinc-700 transition hover:text-zinc-900"
+            >
+              {label}
+            </Link>
+          ))}
         </nav>
 
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+          <button
+            type="button"
+            className="rounded-full border border-zinc-900 bg-white px-4 py-2 text-sm font-semibold text-zinc-900 transition hover:bg-zinc-50"
+          >
+            Sign in
+          </button>
           <Link
             href="#plans"
-            className="rounded-full border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 shadow-sm transition hover:shadow-md"
+            className="inline-flex items-center gap-1 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white shadow-md transition hover:bg-brand-hover"
           >
-            Browse plans
+            Drop in
+            <span aria-hidden>→</span>
           </Link>
         </div>
       </div>

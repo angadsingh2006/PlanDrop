@@ -13,16 +13,25 @@ const config: Config = {
           hover: "#E31C5F",
           soft: "#FFEBEE",
         },
+        navy: {
+          DEFAULT: "#1A1C2E",
+          deep: "#0F1020",
+          card: "#1E1B4B",
+        },
       },
       fontFamily: {
         sans: ["var(--font-inter)", "system-ui", "sans-serif"],
+        display: ["var(--font-syne)", "var(--font-inter)", "system-ui", "sans-serif"],
       },
       boxShadow: {
-        search: "0 3px 12px 0 rgba(0, 0, 0, 0.08), 0 1px 2px 0 rgba(0, 0, 0, 0.04)",
-        card: "0 6px 16px rgba(0, 0, 0, 0.08)",
+        search:
+          "0 3px 12px 0 rgba(0, 0, 0, 0.08), 0 1px 2px 0 rgba(0, 0, 0, 0.04)",
+        card: "0 6px 24px rgba(0, 0, 0, 0.08)",
+        icon: "0 4px 14px rgba(0, 0, 0, 0.12)",
       },
       borderRadius: {
         "4xl": "2rem",
+        "5xl": "2.5rem",
       },
     },
   },

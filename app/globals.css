@@ -10,3 +10,13 @@
     @apply bg-brand-soft text-zinc-900;
   }
 }
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
