@@ -1,5 +1,5 @@
 "use client";
-
+import { getSessionId } from "@/lib/session-id";
 import { Link01Icon, MapsIcon, PartyIcon } from "@hugeicons/core-free-icons";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -129,35 +129,46 @@ export function GoPlanClient({
 
   const isYours = claimId === plan.id;
 
-  function confirmRelease() {
-    if (!plan) return;
-    setUnclaimOpen(false);
-    const r = releaseClaim();
-    const area = areaHint?.trim() || getStoredArea() || "Atlanta, GA";
-    if (r.banned) {
-      setBanModalOpen(true);
-      router.push(buildPlansHref(area));
-      return;
-    }
-    const back = buildPlansHref(area);
-    if (r.strikeAfter === 1) {
-      setStrikeInfo({
-        title: "Released",
-        body: "Got it. Releasing too many times in a row can temporarily block new claims — we want real plans, not venue scouting.",
-      });
-      setPostReleaseNav(back);
-      return;
-    }
-    if (r.strikeAfter === 2) {
-      setStrikeInfo({
-        title: "Heads up",
-        body: "Second release this session. One more release and new claims pause for 5 minutes to stop repeat scouting.",
-      });
-      setPostReleaseNav(back);
-      return;
-    }
-    router.push(back);
+  async function confirmRelease() {
+  if (!plan) return;
+  setUnclaimOpen(false);
+
+  // Delete from Supabase so all users see it unclaimed
+  await fetch("/api/unclaim-plan", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      planId: plan.id,
+      sessionId: getSessionId(),
+    }),
+  });
+
+  const r = releaseClaim();
+  const area = areaHint?.trim() || getStoredArea() || "Atlanta, GA";
+  if (r.banned) {
+    setBanModalOpen(true);
+    router.push(buildPlansHref(area));
+    return;
   }
+  const back = buildPlansHref(area);
+  if (r.strikeAfter === 1) {
+    setStrikeInfo({
+      title: "Released",
+      body: "Got it. Releasing too many times in a row can temporarily block new claims — we want real plans, not venue scouting.",
+    });
+    setPostReleaseNav(back);
+    return;
+  }
+  if (r.strikeAfter === 2) {
+    setStrikeInfo({
+      title: "Heads up",
+      body: "Second release this session. One more release and new claims pause for 5 minutes to stop repeat scouting.",
+    });
+    setPostReleaseNav(back);
+    return;
+  }
+  router.push(back);
+}
 
   return (
     <>
