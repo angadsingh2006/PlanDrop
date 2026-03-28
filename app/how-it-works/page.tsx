@@ -29,10 +29,10 @@ export default function HowItWorksPage() {
               group.
             </p>
             <Link
-              href="/plans"
+              href="/drop"
               className="mt-8 inline-flex items-center gap-2 rounded-full bg-brand px-8 py-4 text-base font-bold text-white shadow-xl shadow-brand/20 transition-all hover:-translate-y-0.5 hover:bg-brand-hover"
             >
-              Browse plans
+              Start setup — drop a pin
               <span aria-hidden>→</span>
             </Link>
           </div>

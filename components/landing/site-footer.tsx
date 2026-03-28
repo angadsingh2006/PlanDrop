@@ -28,6 +28,9 @@ export function SiteFooter() {
           <Link href="/how-it-works" className="hover:text-white">
             How it works
           </Link>
+          <Link href="/drop" className="hover:text-white">
+            Drop a pin
+          </Link>
           <Link href="/plans" className="hover:text-white">
             Browse plans
           </Link>

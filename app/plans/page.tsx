@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 import { BrowsePlansSection } from "@/components/landing/browse-plans-section";
+import { PlansPageStepper } from "@/components/plans-page-stepper";
 import { SiteFooter } from "@/components/landing/site-footer";
 import { SiteHeader } from "@/components/landing/site-header";
 
@@ -14,6 +16,9 @@ export default function PlansPage() {
   return (
     <>
       <SiteHeader />
+      <Suspense fallback={null}>
+        <PlansPageStepper />
+      </Suspense>
       <main>
         <section className="border-b border-zinc-100 bg-white px-4 pb-8 pt-12 sm:px-6 sm:pb-10 sm:pt-16 lg:px-8">
           <div className="mx-auto max-w-3xl text-center">

@@ -6,20 +6,40 @@ import {
   Clock03Icon,
   EyeIcon,
   FilterIcon,
-  FireIcon,
+  Image01Icon,
   Leaf01Icon,
   Location01Icon,
+  MapsIcon,
   MountainIcon,
   Restaurant01Icon,
   RunningShoesIcon,
   UserGroupIcon,
   UserMultiple02Icon,
 } from "@hugeicons/core-free-icons";
-import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useId, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useId, useMemo, useState } from "react";
 import type { IconSvgElement } from "@hugeicons/react";
+import { ClaimBanModal } from "@/components/claim-ban-modal";
+import { UnclaimConfirmModal } from "@/components/unclaim-confirm-modal";
 import { HugeIcon } from "@/components/ui/huge-icon";
+import { useClaimedPlanId } from "@/hooks/use-claimed-plan-id";
+import { PlanImageGallery } from "@/components/plan-image-gallery";
+import { buildClaimHref, buildGoHref } from "@/lib/claim-links";
+import { buildGoogleMapsHref } from "@/lib/maps-links";
+import { PlanMapPreview } from "@/components/plan-map-preview";
+import { activityBulletsForDisplay } from "@/lib/plan-display";
+import { planPhotoCount } from "@/lib/plan-cover";
+import {
+  getStoredAiPlan,
+  getStoredPin,
+  isClaimBanned,
+  releaseClaim,
+  setStoredAiPlansMap,
+  setStoredArea,
+} from "@/lib/claim-storage";
+import type { Plan } from "@/lib/plans-data";
+import { PLANS, getPlanById } from "@/lib/plans-data";
 
 const filters: {
   id: string;
@@ -35,146 +55,20 @@ const filters: {
   { id: "p4", label: "4+", icon: UserGroupIcon },
 ];
 
-type VibeId = "chill" | "active" | "foodie" | "adv";
-
-type Plan = {
-  id: string;
-  title: string;
-  tagline: string;
-  price: string;
-  meta: string;
-  metaClass: string;
-  stop: string;
-  /** Public path or remote URL for the primary stop cover photo */
-  coverImageSrc: string;
-  coverImageAlt: string;
-  photoCredit: string;
-  duration: string;
-  groupLabel: string;
-  /** Used with filters: vibe category */
-  vibe: VibeId;
-  /** Inclusive group size range the plan supports */
-  minGroup: number;
-  maxGroup: number;
-  available: boolean;
-  viewing?: number;
-  /** Highlights for the detail modal — things to do at the primary stop */
-  locationDetails: string[];
-};
-
-const plans: Plan[] = [
-  {
-    id: "1",
-    title: "Ponce & BeltLine golden hour",
-    tagline: "Stroll the Eastside Trail, then settle in at the market.",
-    price: "~$42/pp",
-    meta: "CHILL · 4–6 PEOPLE · 2.5 HRS",
-    metaClass: "bg-indigo-50 text-indigo-700 ring-1 ring-indigo-100",
-    stop: "Ponce City Market (6:30 PM)",
-    coverImageSrc: "/images/ponce-city-market.png",
-    coverImageAlt:
-      "Ponce City Market exterior with orange awning and signage in Atlanta",
-    photoCredit: "Ponce City Market · Atlanta",
-    duration: "2.5 hrs",
-    groupLabel: "4–6",
-    vibe: "chill",
-    minGroup: 4,
-    maxGroup: 6,
-    available: true,
-    viewing: 7,
-    locationDetails: [
-      "Hop between food stalls, sit-down spots, and shops under the brick arches.",
-      "Walk or bike the Eastside Trail right outside for golden-hour views.",
-      "Grab drinks on a patio and keep the group loose — no single table required.",
-      "Meet at the central courtyard when everyone arrives on their own time.",
-    ],
-  },
-  {
-    id: "2",
-    title: "Piedmont Park morning loop",
-    tagline: "Lake loop, skyline views, cold coffee after.",
-    price: "~$18/pp",
-    meta: "ACTIVE · 2–4 PEOPLE · 2 HRS",
-    metaClass: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100",
-    stop: "Piedmont Park — 12th St & Piedmont Ave (8:00 AM)",
-    coverImageSrc: "/images/piedmont-park-clara-meer.png",
-    coverImageAlt:
-      "Lake Clara Meer in Piedmont Park with Midtown Atlanta skyline reflected on the water",
-    photoCredit: "Piedmont Park · Atlanta",
-    duration: "2 hrs",
-    groupLabel: "2–4",
-    vibe: "active",
-    minGroup: 2,
-    maxGroup: 4,
-    available: false,
-    locationDetails: [
-      "Circle Lake Clara Meer for a flat, easy loop with skyline reflections.",
-      "Spread out on open lawns or use the active oval for a light jog.",
-      "Catch Midtown towers over the treeline — classic Atlanta postcard views.",
-      "Use the dog park or sports courts if your crew wants a little extra movement.",
-      "Finish with cold coffee from a nearby café on the park edge.",
-    ],
-  },
-  {
-    id: "3",
-    title: "Krog Street tasting line",
-    tagline: "Small plates, shared tables, zero decision fatigue.",
-    price: "~$55/pp",
-    meta: "FOODIE · 4 PEOPLE · 3 HRS",
-    metaClass: "bg-amber-50 text-amber-800 ring-1 ring-amber-100",
-    stop: "Krog Street Market (7:15 PM)",
-    coverImageSrc: "/images/krog-street-market.png",
-    coverImageAlt:
-      "Krog Street Market exterior at dusk with patio, signage, and parking in front",
-    photoCredit: "Krog Street Market · Atlanta",
-    duration: "3 hrs",
-    groupLabel: "4",
-    vibe: "foodie",
-    minGroup: 4,
-    maxGroup: 4,
-    available: true,
-    locationDetails: [
-      "Share small plates from different vendors so nobody has to pick one restaurant.",
-      "Post up on the covered patio or high-top rails for a social, low-pressure dinner.",
-      "Browse beer and wine at Hop City–style counters before you commit to food.",
-      "Stroll Krog Street Tunnel murals if you want a quick art break between bites.",
-      "Easy parking and BeltLine access for late arrivals.",
-    ],
-  },
-  {
-    id: "4",
-    title: "Mercedes-Benz Stadium circuit",
-    tagline: "The pinwheel roof, the plaza, then easy hops to Westside food.",
-    price: "~$45/pp",
-    meta: "ADVENTUROUS · 2–4 PEOPLE · 3 HRS",
-    metaClass: "bg-violet-50 text-violet-800 ring-1 ring-violet-100",
-    stop: "Mercedes-Benz Stadium — Northside Dr NW (4:30 PM)",
-    coverImageSrc: "/images/mercedes-benz-stadium.png",
-    coverImageAlt:
-      "Aerial view of Mercedes-Benz Stadium with closed retractable roof and Mercedes star on the facade",
-    photoCredit: "Mercedes-Benz Stadium · Atlanta",
-    duration: "3 hrs",
-    groupLabel: "2–4",
-    vibe: "adv",
-    minGroup: 2,
-    maxGroup: 4,
-    available: true,
-    locationDetails: [
-      "Walk the plaza and take in the pinwheel roof and Mercedes star facade.",
-      "On event days, soak up pregame energy; off-days, quiet architecture photos.",
-      "Visit the team store for gear if your group wants a shared souvenir stop.",
-      "Loop the stadium footprint, then cut toward Westside or GWCC-adjacent dining.",
-      "Pair with a short rideshare hop if you want Atlantic Station or Vine City after.",
-    ],
-  },
-];
-
 function PlanDetailModal({
   plan,
   onClose,
+  area,
+  claimedId,
+  onClaimClick,
+  onUnclaimRequest,
 }: {
   plan: Plan | null;
   onClose: () => void;
+  area: string | null;
+  claimedId: string | null;
+  onClaimClick: (e: React.MouseEvent) => void;
+  onUnclaimRequest: () => void;
 }) {
   const titleId = useId();
   const open = plan != null;
@@ -196,6 +90,15 @@ function PlanDetailModal({
   if (!plan) return null;
 
   const vibeLabel = plan.meta.split("·")[0].trim();
+  const claimHref = buildClaimHref(plan, area);
+  const goHref = buildGoHref(plan, area);
+  const isMine = claimedId === plan.id;
+  const hasOtherClaim =
+    claimedId !== null && claimedId !== plan.id && plan.available;
+  const claimedPlanResolved =
+    claimedId != null
+      ? (getPlanById(claimedId) ?? getStoredAiPlan(claimedId))
+      : null;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4">
@@ -209,117 +112,212 @@ function PlanDetailModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="relative z-10 flex w-[min(100%,min(96vw,1040px))] max-w-none flex-col overflow-hidden rounded-xl bg-white shadow-2xl ring-1 ring-zinc-200/80 sm:h-[min(80vh,560px)] sm:max-h-[min(80vh,560px)] sm:min-h-0 sm:flex-row"
+        className="relative z-10 flex max-h-[min(92vh,720px)] min-h-0 w-[min(100%,min(96vw,960px))] flex-col overflow-hidden rounded-xl bg-white shadow-2xl ring-1 ring-zinc-200/80 sm:max-h-[min(92vh,720px)] sm:flex-row sm:items-start"
       >
-        {/* Photo strip — short on mobile, full-height column on sm+ */}
-        <div className="relative h-36 w-full shrink-0 bg-zinc-100 sm:h-full sm:min-h-0 sm:w-[min(38%,360px)] sm:min-w-[240px]">
-          <Image
-            src={plan.coverImageSrc}
-            alt={plan.coverImageAlt}
-            fill
-            className="object-cover"
-            sizes="(max-width: 640px) 100vw, 380px"
-          />
-          <div
-            className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/10"
-            aria-hidden
-          />
-          <button
-            type="button"
-            onClick={onClose}
-            className="absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/95 text-zinc-800 shadow-md ring-1 ring-zinc-200/80 transition hover:bg-white sm:right-3 sm:top-3 sm:h-9 sm:w-9"
-            aria-label="Close"
-          >
-            <HugeIcon icon={Cancel01Icon} size={18} strokeWidth={2} />
-          </button>
-          <p className="pointer-events-none absolute bottom-1.5 left-2.5 right-2.5 text-[9px] font-medium text-white/90 sm:text-[10px]">
-            {plan.photoCredit}
-          </p>
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute right-2 top-2 z-30 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/95 text-zinc-800 shadow-md ring-1 ring-zinc-200/80 transition hover:bg-white sm:right-3 sm:top-3"
+          aria-label="Close"
+        >
+          <HugeIcon icon={Cancel01Icon} size={18} strokeWidth={2} />
+        </button>
+
+        <div className="relative w-full shrink-0 overflow-hidden bg-zinc-100 sm:w-[min(56%,580px)] sm:max-w-[600px] sm:min-w-[400px] sm:flex-none">
+          <div className="relative aspect-[5/3] w-full sm:aspect-[16/10] sm:max-h-[min(58vh,520px)]">
+            <PlanImageGallery plan={plan} variant="modal" priority />
+            <p className="pointer-events-none absolute bottom-2 left-2.5 right-20 z-10 text-[9px] font-medium text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)] sm:bottom-3 sm:right-24 sm:text-[10px]">
+              {photoCreditDisplay(plan.photoCredit)}
+            </p>
+          </div>
         </div>
 
-        {/* Body: grid keeps footer pinned; columns share one full height on sm+ */}
-        <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-y-auto sm:overflow-hidden">
-          <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_auto] p-3 sm:p-4">
-            <div className="flex min-h-0 flex-col gap-3 sm:flex-row sm:items-stretch sm:gap-4">
-              <div className="flex min-h-0 min-w-0 shrink-0 flex-col rounded-lg border border-zinc-200 bg-zinc-50/95 p-3 shadow-sm sm:w-[260px] sm:max-w-[min(46%,280px)]">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p
-                  className={`inline-block w-fit rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${plan.metaClass}`}
-                >
-                  {vibeLabel}
-                </p>
-                <span
-                  className={`shrink-0 rounded px-1.5 py-0.5 text-xs font-bold tabular-nums sm:text-sm ${plan.available ? "bg-white text-zinc-800 ring-1 ring-zinc-200/80" : "bg-zinc-100/80 text-zinc-400"}`}
-                >
-                  {plan.price}
-                </span>
-              </div>
-              <h2
-                id={titleId}
-                className="font-display mt-2 text-base font-bold leading-snug tracking-tight text-zinc-900"
-              >
-                {plan.title}
-              </h2>
-              <p className="mt-1.5 text-xs leading-snug text-zinc-600 sm:text-[13px]">{plan.tagline}</p>
-              <div className="mt-3 space-y-1.5 border-t border-zinc-200/80 pt-2.5 text-[11px] text-zinc-800 sm:text-xs">
-                <div className="flex items-start gap-1.5">
-                  <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded bg-white ring-1 ring-zinc-200/80">
-                    <HugeIcon
-                      icon={Location01Icon}
-                      size={10}
-                      className="text-brand"
-                      strokeWidth={2}
-                    />
-                  </div>
-                  <span className="leading-snug">{plan.stop}</span>
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col border-t border-zinc-100 sm:border-l sm:border-t-0">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-2 pt-3 sm:px-4 sm:pb-3 sm:pt-4">
+            <div className="flex flex-col gap-4">
+              <div className="flex min-w-0 flex-col rounded-lg border border-zinc-200 bg-zinc-50/95 p-3 shadow-sm">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p
+                    className={`inline-block w-fit rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${plan.metaClass}`}
+                  >
+                    {vibeLabel}
+                  </p>
+                  <span
+                    className={`shrink-0 rounded px-1.5 py-0.5 text-xs font-bold tabular-nums sm:text-sm ${plan.available || isMine ? "bg-white text-zinc-800 ring-1 ring-zinc-200/80" : "bg-zinc-100/80 text-zinc-400"}`}
+                  >
+                    {plan.price}
+                  </span>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-white ring-1 ring-zinc-200/80">
-                    <HugeIcon icon={Clock03Icon} size={10} className="text-zinc-500" />
+                <h2
+                  id={titleId}
+                  className="font-display mt-1.5 text-base font-bold leading-snug tracking-tight text-zinc-900"
+                >
+                  {plan.title}
+                </h2>
+                <p className="mt-1 text-xs leading-snug text-zinc-600 sm:text-[13px]">{plan.tagline}</p>
+                <div className="mt-2 space-y-1.5 border-t border-zinc-200/80 pt-2 text-[11px] text-zinc-800 sm:text-xs">
+                  <div className="flex items-start gap-1.5">
+                    <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded bg-white ring-1 ring-zinc-200/80">
+                      <HugeIcon
+                        icon={Location01Icon}
+                        size={10}
+                        className="text-brand"
+                        strokeWidth={2}
+                      />
+                    </div>
+                    <span className="leading-snug">{plan.stop}</span>
                   </div>
-                  <span className="font-semibold tabular-nums">{plan.duration}</span>
+                  <div className="flex items-center gap-1.5">
+                    <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-white ring-1 ring-zinc-200/80">
+                      <HugeIcon icon={Clock03Icon} size={10} className="text-zinc-500" />
+                    </div>
+                    <span className="font-semibold tabular-nums">{plan.duration}</span>
+                  </div>
+                  {plan.openingHoursLine ? (
+                    <p className="pl-6 text-[10px] leading-snug text-zinc-600">
+                      Venue: {plan.openingHoursLine}
+                    </p>
+                  ) : null}
+                  <a
+                    href={buildGoogleMapsHref(plan)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-1 inline-flex items-center gap-1.5 pl-6 text-[11px] font-semibold text-brand hover:underline"
+                  >
+                    <HugeIcon icon={MapsIcon} size={12} strokeWidth={2} aria-hidden />
+                    Open in Google Maps
+                  </a>
+                  <PlanMapPreview plan={plan} className="mt-2.5" variant="modal" />
+                  {plan.formattedAddress ? (
+                    <p className="mt-1 text-[10px] leading-snug text-zinc-600">
+                      {plan.formattedAddress}
+                    </p>
+                  ) : null}
                 </div>
-              </div>
               </div>
 
-              <div className="flex min-h-0 min-w-0 flex-1 flex-col border-t border-zinc-100 pt-3 sm:border-l sm:border-t-0 sm:pl-4 sm:pt-0">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+              <div className="rounded-lg border border-zinc-200 bg-white p-3 shadow-sm">
+                <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-500">
                   At this spot
                 </p>
-                <ul className="mt-1.5 grid min-h-0 flex-1 list-none gap-x-4 gap-y-1 pl-0 text-[11px] leading-snug text-zinc-600 sm:mt-2 sm:grid-cols-2 sm:gap-y-1.5 sm:text-[12px] sm:leading-snug">
-                  {plan.locationDetails.map((line, i) => (
-                    <li key={`${plan.id}-at-${i}`} className="relative pl-3.5 before:absolute before:left-0 before:text-zinc-400 before:content-['•']">
+                <ul className="mt-2.5 list-none space-y-2.5 pl-0 text-sm leading-relaxed text-zinc-700">
+                  {activityBulletsForDisplay(plan).map((line, i) => (
+                    <li
+                      key={`${plan.id}-at-${i}`}
+                      className="relative pl-4 before:absolute before:left-0 before:top-[0.55em] before:h-1.5 before:w-1.5 before:rounded-full before:bg-brand"
+                    >
                       {line}
                     </li>
                   ))}
                 </ul>
+                {plan.openingHoursWeekday && plan.openingHoursWeekday.length > 0 ? (
+                  <details className="mt-3 text-xs text-zinc-600">
+                    <summary className="cursor-pointer font-semibold text-zinc-700">
+                      Full opening hours
+                    </summary>
+                    <ul className="mt-2 list-none space-y-1 pl-0">
+                      {plan.openingHoursWeekday.map((line) => (
+                        <li key={line}>{line}</li>
+                      ))}
+                    </ul>
+                  </details>
+                ) : null}
               </div>
             </div>
+          </div>
 
-            <div className="mt-3 flex shrink-0 flex-col gap-2 border-t border-zinc-100 pt-3 sm:mt-4 sm:flex-row sm:justify-end sm:gap-3">
-              {plan.available ? (
+          <div className="shrink-0 border-t border-zinc-100 bg-white px-3 py-3 sm:px-4">
+            {isMine ? (
+              <div className="flex w-full flex-col gap-2">
+                <Link
+                  href={goHref}
+                  onClick={onClose}
+                  className="block w-full rounded-lg bg-brand px-4 py-2.5 text-center text-sm font-bold text-white shadow-sm transition hover:bg-brand-hover"
+                >
+                  Your plan →
+                </Link>
                 <button
                   type="button"
-                  className="w-full rounded-lg bg-brand px-3 py-2 text-center text-xs font-bold text-white shadow-sm transition hover:bg-brand-hover sm:w-auto sm:px-4 sm:py-2 sm:text-sm"
+                  onClick={onUnclaimRequest}
+                  className="w-full rounded-lg border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
                 >
-                  Claim plan →
+                  Unclaim
                 </button>
-              ) : (
+              </div>
+            ) : !plan.available ? (
+              <button
+                type="button"
+                disabled
+                className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-zinc-100 px-4 py-2.5 text-sm font-bold text-zinc-400"
+              >
+                <HugeIcon icon={CheckmarkCircle02Icon} size={16} />
+                Claimed
+              </button>
+            ) : hasOtherClaim ? (
+              <div className="flex flex-col gap-2">
+                <p className="text-center text-xs text-zinc-500">
+                  You already have a plan locked.
+                </p>
+                <Link
+                  href={
+                    claimedPlanResolved
+                      ? buildGoHref(claimedPlanResolved, area)
+                      : `/go/${claimedId}`
+                  }
+                  onClick={onClose}
+                  className="block w-full rounded-lg border border-zinc-200 bg-white px-4 py-2.5 text-center text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
+                >
+                  Open it
+                </Link>
                 <button
                   type="button"
-                  disabled
-                  className="inline-flex w-full items-center justify-center gap-1 rounded-lg bg-zinc-100 px-3 py-2 text-xs font-bold text-zinc-400 sm:w-auto sm:px-4 sm:py-2 sm:text-sm"
+                  onClick={onUnclaimRequest}
+                  className="w-full rounded-lg border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
                 >
-                  <HugeIcon icon={CheckmarkCircle02Icon} size={14} />
-                  Claimed
+                  Unclaim my plan
                 </button>
-              )}
-            </div>
+              </div>
+            ) : (
+              <Link
+                href={claimHref}
+                onClick={(e) => {
+                  onClaimClick(e);
+                  if (!e.defaultPrevented) onClose();
+                }}
+                className="block w-full rounded-lg bg-brand px-4 py-2.5 text-center text-sm font-bold text-white shadow-sm transition hover:bg-brand-hover"
+              >
+                Claim plan →
+              </Link>
+            )}
           </div>
         </div>
       </div>
     </div>
   );
+}
+
+/** Match reference: "Venue - Atlanta" on image overlay */
+function photoCreditDisplay(photoCredit: string): string {
+  return photoCredit.replace(/\s*·\s*/g, " - ").replace(/\s*•\s*/g, " - ");
+}
+
+/** Title-case area strings from URL or geocode (e.g. "houston texas" → "Houston Texas"). */
+function formatAreaDisplay(area: string): string {
+  const t = area.trim();
+  if (!t) return "your area";
+  return t
+    .split(/,\s*/)
+    .map((segment) =>
+      segment
+        .split(/\s+/)
+        .filter(Boolean)
+        .map((w) => {
+          if (/^[A-Za-z]{2}$/.test(w)) return w.toUpperCase();
+          return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+        })
+        .join(" "),
+    )
+    .join(", ");
 }
 
 function planMatchesFilter(plan: Plan, filterId: string): boolean {
@@ -343,82 +341,254 @@ function planMatchesFilter(plan: Plan, filterId: string): boolean {
   }
 }
 
-export function BrowsePlansSection() {
+function BrowsePlansSectionInner() {
+  const searchParams = useSearchParams();
+  const area = searchParams.get("area");
+  const areaTrim = area?.trim() ?? "";
+
+  useEffect(() => {
+    if (areaTrim) setStoredArea(areaTrim);
+  }, [areaTrim]);
+
+  const claimedId = useClaimedPlanId();
+  const areaLabel = useMemo(
+    () => formatAreaDisplay(areaTrim || "Atlanta, GA"),
+    [areaTrim],
+  );
+
   const [active, setActive] = useState<string>("all");
   const [detailPlan, setDetailPlan] = useState<Plan | null>(null);
+  const [aiPlans, setAiPlans] = useState<Plan[] | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [banModalOpen, setBanModalOpen] = useState(false);
+  const [unclaimOpen, setUnclaimOpen] = useState(false);
+
+  useEffect(() => {
+    if (!areaTrim) {
+      setAiPlans(null);
+      setAiError(null);
+      return;
+    }
+    let cancelled = false;
+    const run = async () => {
+      setAiLoading(true);
+      setAiError(null);
+      try {
+        const pin = getStoredPin();
+        const body: { area: string; lat?: number; lng?: number } = {
+          area: areaTrim,
+        };
+        if (pin) {
+          body.lat = pin.lat;
+          body.lng = pin.lng;
+        }
+        const res = await fetch("/api/ai-plans", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (!res.ok) {
+          const j = (await res.json().catch(() => ({}))) as { error?: string };
+          throw new Error(j.error ?? "Could not load ideas");
+        }
+        const data = (await res.json()) as { plans: Plan[] };
+        if (!cancelled && data.plans?.length) {
+          setStoredAiPlansMap(data.plans);
+          setAiPlans(data.plans);
+        } else if (!cancelled) {
+          setAiPlans(null);
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setAiError(e instanceof Error ? e.message : "Something went wrong");
+          setAiPlans(null);
+        }
+      } finally {
+        if (!cancelled) setAiLoading(false);
+      }
+    };
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [areaTrim]);
+
+  const boardPlans = useMemo(() => {
+    if (areaTrim) {
+      if (aiPlans && aiPlans.length > 0) return aiPlans;
+      if (aiLoading) return [];
+      return PLANS;
+    }
+    return PLANS;
+  }, [areaTrim, aiPlans, aiLoading]);
 
   const filteredPlans = useMemo(
-    () => plans.filter((p) => planMatchesFilter(p, active)),
-    [active],
+    () => boardPlans.filter((p) => planMatchesFilter(p, active)),
+    [boardPlans, active],
   );
 
   const openTonight = useMemo(
-    () => plans.filter((p) => p.available).length,
-    [],
+    () => boardPlans.filter((p) => p.available).length,
+    [boardPlans],
   );
+
+  const firstOpenPlan = useMemo(
+    () => boardPlans.find((p) => p.available) ?? null,
+    [boardPlans],
+  );
+
+  const areaForLinks = areaTrim || null;
+
+  function onClaimClick(e: React.MouseEvent) {
+    if (isClaimBanned()) {
+      e.preventDefault();
+      setBanModalOpen(true);
+    }
+  }
+
+  function handleUnclaimConfirm() {
+    setUnclaimOpen(false);
+    const r = releaseClaim();
+    if (r.banned) {
+      setBanModalOpen(true);
+      setDetailPlan(null);
+      return;
+    }
+    if (r.strikeAfter === 1) {
+      window.alert(
+        "Got it. Releasing too many times in a row can temporarily block new claims — we want real plans, not venue scouting.",
+      );
+    } else if (r.strikeAfter === 2) {
+      window.alert(
+        "Second release this session. One more release and new claims pause for 5 minutes to stop repeat scouting.",
+      );
+    }
+    setDetailPlan(null);
+  }
 
   return (
     <>
-      <PlanDetailModal plan={detailPlan} onClose={() => setDetailPlan(null)} />
-    <section id="plans" className="scroll-mt-20 px-4 py-12 sm:px-6 lg:px-8">
-      {/* Live strip */}
-      <div className="mx-auto mb-8 max-w-5xl overflow-hidden rounded-2xl bg-gradient-to-r from-navy-card via-[#252347] to-navy px-4 py-4 sm:px-6 sm:py-5">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className="flex min-w-0 items-center gap-2 text-sm font-semibold text-white sm:text-base">
-            <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10">
-              <HugeIcon icon={FireIcon} size={18} className="text-amber-300" />
-            </span>
-            <span className="min-w-0 leading-snug">
-              Plans are dropping in{" "}
-              <span className="whitespace-nowrap">Atlanta right now</span>
-            </span>
-          </p>
-          <div className="flex flex-wrap items-center gap-3 sm:shrink-0">
-            <span className="rounded-full bg-brand px-3 py-1 text-xs font-bold text-white sm:text-sm">
-              {openTonight === 0
-                ? "All claimed for tonight"
-                : `${openTonight} plan${openTonight === 1 ? "" : "s"} open tonight`}
-            </span>
-            <Link
-              href="/plans"
-              className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-brand-hover hover:shadow-lg hover:shadow-brand/20"
-            >
-              Claim yours
-              <span aria-hidden>→</span>
-            </Link>
+      <ClaimBanModal open={banModalOpen} onClose={() => setBanModalOpen(false)} />
+      <UnclaimConfirmModal
+        open={unclaimOpen}
+        onClose={() => setUnclaimOpen(false)}
+        onConfirm={handleUnclaimConfirm}
+      />
+      <PlanDetailModal
+        plan={detailPlan}
+        onClose={() => setDetailPlan(null)}
+        area={areaForLinks}
+        claimedId={claimedId}
+        onClaimClick={onClaimClick}
+        onUnclaimRequest={() => setUnclaimOpen(true)}
+      />
+    <section
+      id="plans"
+      className="scroll-mt-20 bg-white px-4 py-12 sm:px-6 sm:py-16 lg:px-8"
+    >
+      <div className="relative mx-auto max-w-5xl">
+        <div className="relative mb-8 overflow-hidden rounded-2xl border border-zinc-200/90 bg-gradient-to-br from-white via-zinc-50/40 to-brand-soft/25 shadow-[0_2px_20px_rgba(15,23,42,0.05)] ring-1 ring-zinc-100/80">
+          <div
+            className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-brand/25 to-transparent"
+            aria-hidden
+          />
+          <div className="flex flex-col gap-4 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:px-6 sm:py-5">
+            <div className="flex min-w-0 items-start gap-3 sm:items-center">
+              <span
+                className="relative mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-soft ring-1 ring-brand/15 sm:mt-0"
+                aria-hidden
+              >
+                <span className="absolute inline-flex h-2.5 w-2.5 animate-ping rounded-full bg-emerald-400/70" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.65)]" />
+              </span>
+              <div className="min-w-0">
+                <p className="text-sm leading-snug text-zinc-800 sm:text-[15px]">
+                  <span className="mr-2 inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 align-middle text-[10px] font-bold uppercase tracking-wider text-emerald-800 ring-1 ring-emerald-200/90">
+                    Live
+                  </span>
+                  Plans are dropping in{" "}
+                  <span className="font-semibold text-zinc-900">{areaLabel}</span>{" "}
+                  right now
+                </p>
+                <p className="mt-1 text-xs text-zinc-500">
+                  Open spots update in real time as people claim.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 sm:justify-end sm:gap-3">
+              <span
+                aria-live="polite"
+                aria-atomic="true"
+                className={`inline-flex h-10 items-center rounded-full border px-3 text-xs font-semibold tabular-nums sm:px-3.5 sm:text-sm ${
+                  openTonight === 0
+                    ? "border-zinc-200 bg-zinc-100/80 text-zinc-600"
+                    : "border-emerald-200/90 bg-emerald-50 text-emerald-900"
+                }`}
+              >
+                {openTonight === 0
+                  ? "Tonight: all claimed"
+                  : `${openTonight} open tonight`}
+              </span>
+              <Link
+                href={
+                  firstOpenPlan
+                    ? buildClaimHref(firstOpenPlan, areaForLinks)
+                    : "#plans"
+                }
+                onClick={firstOpenPlan ? onClaimClick : undefined}
+                className={`inline-flex h-10 items-center justify-center gap-1 rounded-full px-4 text-sm font-bold shadow-sm transition sm:min-w-[8.5rem] ${
+                  firstOpenPlan
+                    ? "bg-brand text-white hover:bg-brand-hover"
+                    : "border border-zinc-200 bg-zinc-100 text-zinc-500 hover:bg-zinc-200/80"
+                }`}
+              >
+                Claim yours
+                <span aria-hidden>→</span>
+              </Link>
+              <Link
+                href="/#hero-locate"
+                className="inline-flex h-10 items-center justify-center rounded-full border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-700 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50"
+              >
+                Change location
+              </Link>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="mx-auto max-w-5xl">
-        <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="mb-8 flex flex-col gap-4 sm:mb-10 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-widest text-brand">
-              Live in Atlanta, GA
+            <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand">
+              Live in {areaLabel}
             </p>
-            <h2 className="font-display mt-0.5 text-xl font-bold leading-snug tracking-[-0.02em] text-zinc-900 sm:text-2xl">
+            <h2 className="font-display mt-2 text-3xl font-bold tracking-[-0.03em] text-zinc-900 sm:text-4xl">
               Available plans tonight
             </h2>
+            {aiError ? (
+              <p className="mt-2 text-sm font-medium text-amber-800">
+                {aiError} Showing the demo catalog for now.
+              </p>
+            ) : null}
           </div>
           <Link
             href="/plans"
-            className="text-sm font-semibold text-zinc-900 underline decoration-zinc-400 underline-offset-4 hover:decoration-brand"
+            className="shrink-0 self-start text-sm font-semibold text-zinc-900 underline decoration-zinc-400 underline-offset-4 transition hover:decoration-brand hover:text-brand sm:mt-8"
           >
-            Show all {plans.length} plan{plans.length === 1 ? "" : "s"} →
+            Show all {boardPlans.length} plans →
           </Link>
         </div>
 
-        <div className="no-scrollbar mb-8 flex gap-1.5 overflow-x-auto pb-2">
+        <div className="no-scrollbar mb-10 flex flex-wrap gap-2">
           {filters.map((f) => (
             <button
               key={f.id}
               type="button"
               aria-pressed={active === f.id}
               onClick={() => setActive(f.id)}
-              className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-semibold transition sm:text-sm ${
+              className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-4 py-2 text-xs font-semibold transition sm:text-sm ${
                 active === f.id
-                  ? "border-navy bg-navy text-white"
-                  : "border-zinc-200 bg-white text-zinc-800 hover:border-zinc-300"
+                  ? "border-transparent bg-zinc-900 text-white shadow-sm"
+                  : "border-zinc-200 bg-white text-zinc-700 shadow-sm hover:border-zinc-300 hover:bg-zinc-50"
               }`}
             >
               <HugeIcon
@@ -431,8 +601,16 @@ export function BrowsePlansSection() {
           ))}
         </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredPlans.length === 0 ? (
+        <div className="relative grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {aiLoading && areaTrim ? (
+            <div className="col-span-full flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-brand/30 bg-brand-soft/20 px-6 py-12 text-center">
+              <span className="h-8 w-8 animate-spin rounded-full border-2 border-brand border-t-transparent" />
+              <p className="text-sm font-semibold text-zinc-800">
+                Generating ideas for {areaLabel}…
+              </p>
+            </div>
+          ) : null}
+          {!aiLoading && filteredPlans.length === 0 ? (
             <p className="col-span-full rounded-xl border border-dashed border-zinc-200 bg-zinc-50 px-5 py-10 text-center text-sm text-zinc-600">
               No plans match this filter. Try{" "}
               <button
@@ -445,66 +623,78 @@ export function BrowsePlansSection() {
               or another option.
             </p>
           ) : null}
-          {filteredPlans.map((plan) => (
+          {!aiLoading &&
+            filteredPlans.map((plan) => {
+            const isMine = claimedId === plan.id;
+            const hasOtherClaim =
+              claimedId !== null && claimedId !== plan.id && plan.available;
+            const lockedByOthers = !plan.available && !isMine;
+
+            const photoCount = planPhotoCount(plan);
+            return (
             <article
               key={plan.id}
-              className={`group flex flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-card transition-all hover:-translate-y-0.5 hover:shadow-lg ${!plan.available ? "opacity-80 grayscale-[0.35]" : ""}`}
+              className={`group relative flex flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm transition hover:shadow-md ${lockedByOthers ? "opacity-[0.92] grayscale-[0.2]" : ""}`}
             >
-              <div className="relative aspect-[5/3] overflow-hidden bg-zinc-100">
-                <Image
-                  src={plan.coverImageSrc}
-                  alt={plan.coverImageAlt}
-                  fill
-                  className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                />
+              <div className="relative overflow-hidden rounded-t-2xl">
+                <PlanImageGallery plan={plan} variant="card" />
                 <div
-                  className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/65 via-black/5 to-black/25"
+                  className="pointer-events-none absolute inset-0 rounded-t-2xl bg-gradient-to-t from-black/55 via-transparent to-black/15"
                   aria-hidden
                 />
-                <div className="absolute left-2 top-2 flex flex-wrap gap-1.5">
-                  {plan.available ? (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-zinc-950/85 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white backdrop-blur-sm">
-                      <span className="h-1 w-1 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.9)]" />
-                      Live
+                <div className="absolute left-2 top-2 z-[1] flex flex-wrap gap-1.5">
+                  {isMine ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-brand px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white backdrop-blur-sm">
+                      <HugeIcon icon={CheckmarkCircle02Icon} size={10} />
+                      Yours
                     </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-zinc-950/70 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white backdrop-blur-sm">
+                  ) : !plan.available ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-black/70 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white backdrop-blur-sm">
                       <HugeIcon icon={CheckmarkCircle02Icon} size={10} className="text-zinc-300" />
                       Claimed
                     </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-black/75 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white backdrop-blur-sm">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.95)]" />
+                      Live
+                    </span>
                   )}
                 </div>
-                {plan.viewing != null && plan.available ? (
-                  <span className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full bg-white/25 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white ring-1 ring-white/35 backdrop-blur-sm">
-                    <HugeIcon icon={EyeIcon} size={10} />
+                {photoCount > 1 && plan.available && !isMine ? (
+                  <span className="absolute right-2 top-2 z-[1] inline-flex items-center gap-1 rounded-full bg-black/45 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white ring-1 ring-white/25 backdrop-blur-sm">
+                    <HugeIcon icon={Image01Icon} size={10} aria-hidden />
+                    {photoCount}
+                  </span>
+                ) : plan.viewing != null && plan.available && !isMine ? (
+                  <span className="absolute right-2 top-2 z-[1] inline-flex items-center gap-1 rounded-full bg-black/45 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white ring-1 ring-white/25 backdrop-blur-sm">
+                    <HugeIcon icon={EyeIcon} size={10} aria-hidden />
                     {plan.viewing}
                   </span>
                 ) : null}
-                <p className="pointer-events-none absolute bottom-1 left-2 right-2 text-[9px] leading-tight text-white/85">
-                  {plan.photoCredit}
+                <p className="pointer-events-none absolute bottom-2 left-2 right-2 z-[1] text-[10px] font-medium leading-snug text-white drop-shadow-sm">
+                  {photoCreditDisplay(plan.photoCredit)}
                 </p>
               </div>
-              <div className="flex flex-1 flex-col p-4">
+              <div className="flex flex-1 flex-col p-3 sm:p-4">
                 <div className="mb-2 flex items-start justify-between gap-2">
                   <p
-                    className={`inline-block w-fit rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${plan.metaClass}`}
+                    className={`inline-block w-fit rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${plan.metaClass}`}
                   >
                     {plan.meta.split("·")[0].trim()}
                   </p>
                   <span
-                    className={`shrink-0 rounded px-1.5 py-0.5 text-[11px] font-bold tabular-nums ${plan.available ? "bg-zinc-100 text-zinc-700" : "bg-zinc-100/60 text-zinc-400"}`}
+                    className={`shrink-0 text-sm font-bold tabular-nums ${plan.available || isMine ? "text-zinc-900" : "text-zinc-400"}`}
                   >
                     {plan.price}
                   </span>
                 </div>
                 <h3
-                  className={`font-display text-base font-bold leading-snug tracking-tight ${plan.available ? "text-zinc-900" : "text-zinc-600"}`}
+                  className={`font-display text-base font-bold leading-snug tracking-tight ${plan.available || isMine ? "text-zinc-900" : "text-zinc-600"}`}
                 >
                   {plan.title}
                 </h3>
                 <p
-                  className={`mt-1.5 line-clamp-2 text-xs leading-relaxed ${plan.available ? "text-zinc-500" : "text-zinc-400"}`}
+                  className={`mt-1.5 line-clamp-2 text-xs leading-relaxed ${plan.available || isMine ? "text-zinc-500" : "text-zinc-400"}`}
                 >
                   {plan.tagline}
                 </p>
@@ -513,19 +703,36 @@ export function BrowsePlansSection() {
                     <HugeIcon
                       icon={Location01Icon}
                       size={9}
-                      className={plan.available ? "text-brand" : "text-zinc-400"}
+                      className={plan.available || isMine ? "text-brand" : "text-zinc-400"}
                       strokeWidth={2}
                     />
                   </div>
-                  <span className={`line-clamp-2 ${!plan.available ? "text-zinc-500" : ""}`}>{plan.stop}</span>
+                  <span className={`line-clamp-2 ${lockedByOthers ? "text-zinc-500" : ""}`}>{plan.stop}</span>
                 </div>
-                <div className="mt-4 flex flex-col gap-3 border-t border-zinc-100 pt-3">
-                  <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] font-medium text-zinc-500">
-                    <span className="inline-flex items-center gap-1">
+                {plan.openingHoursLine ? (
+                  <p className="mt-1.5 line-clamp-2 text-[10px] leading-snug text-zinc-500">
+                    {plan.openingHoursLine}
+                  </p>
+                ) : null}
+                {plan.formattedAddress ? (
+                  <a
+                    href={buildGoogleMapsHref(plan)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-semibold text-brand hover:underline"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <HugeIcon icon={MapsIcon} size={11} strokeWidth={2} aria-hidden />
+                    Open in Maps
+                  </a>
+                ) : null}
+                <div className="mt-3 flex flex-col gap-2 border-t border-zinc-100 pt-3">
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] font-medium text-zinc-500">
+                    <span className="inline-flex items-center gap-1.5">
                       <HugeIcon icon={Clock03Icon} size={12} className="text-zinc-400" />
                       {plan.duration}
                     </span>
-                    <span className="inline-flex items-center gap-1">
+                    <span className="inline-flex items-center gap-1.5">
                       <HugeIcon icon={UserGroupIcon} size={12} className="text-zinc-400" />
                       {plan.groupLabel}
                     </span>
@@ -534,35 +741,94 @@ export function BrowsePlansSection() {
                     <button
                       type="button"
                       onClick={() => setDetailPlan(plan)}
-                      className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-center text-xs font-semibold text-zinc-800 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50 sm:order-1 sm:w-auto"
+                      className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-center text-xs font-semibold text-zinc-900 transition hover:bg-zinc-50 sm:order-1 sm:w-auto"
                     >
                       View
                     </button>
-                    {plan.available ? (
-                      <button
-                        type="button"
-                        className="w-full shrink-0 rounded-lg bg-brand px-3 py-2 text-center text-xs font-bold text-white shadow-sm transition-all hover:bg-brand-hover sm:order-2 sm:w-auto"
-                      >
-                        Claim plan →
-                      </button>
-                    ) : (
+                    {isMine ? (
+                      <div className="flex w-full flex-col gap-2 sm:order-2 sm:w-auto sm:min-w-[200px]">
+                        <Link
+                          href={buildGoHref(plan, areaForLinks)}
+                          className="block w-full shrink-0 rounded-lg bg-brand px-3 py-2.5 text-center text-xs font-bold text-white shadow-sm transition-all hover:bg-brand-hover"
+                        >
+                          Your plan →
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => setUnclaimOpen(true)}
+                          className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-xs font-semibold text-zinc-800 transition hover:bg-zinc-50"
+                        >
+                          Unclaim
+                        </button>
+                      </div>
+                    ) : !plan.available ? (
                       <button
                         type="button"
                         disabled
-                        className="inline-flex w-full items-center justify-center gap-1 rounded-lg bg-zinc-100 px-3 py-2 text-xs font-bold text-zinc-400 sm:order-2 sm:w-auto"
+                        className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-zinc-200 bg-zinc-100 px-3 py-2.5 text-xs font-bold text-zinc-500 sm:order-2 sm:w-auto"
                       >
                         <HugeIcon icon={CheckmarkCircle02Icon} size={12} />
                         Claimed
                       </button>
+                    ) : hasOtherClaim ? (
+                      <div className="flex w-full flex-col gap-2 sm:order-2 sm:w-auto sm:min-w-[200px]">
+                        <button
+                          type="button"
+                          disabled
+                          className="w-full shrink-0 rounded-lg bg-zinc-100 px-3 py-2 text-center text-[11px] font-bold text-zinc-400"
+                        >
+                          Plan locked
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setUnclaimOpen(true)}
+                          className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-xs font-semibold text-zinc-800 transition hover:bg-zinc-50"
+                        >
+                          Unclaim my plan
+                        </button>
+                      </div>
+                    ) : (
+                      <Link
+                        href={buildClaimHref(plan, areaForLinks)}
+                        onClick={onClaimClick}
+                        className="w-full shrink-0 rounded-lg bg-brand px-3 py-2.5 text-center text-xs font-bold text-white shadow-sm transition-all hover:bg-brand-hover sm:order-2 sm:w-auto"
+                      >
+                        Claim plan →
+                      </Link>
                     )}
                   </div>
                 </div>
               </div>
             </article>
-          ))}
+            );
+          })}
         </div>
       </div>
     </section>
     </>
+  );
+}
+
+function BrowsePlansSectionSkeleton() {
+  return (
+    <section className="scroll-mt-20 px-4 py-12 sm:px-6 lg:px-8" aria-hidden>
+      <div className="mx-auto max-w-5xl animate-pulse space-y-6">
+        <div className="h-24 rounded-2xl bg-zinc-100" />
+        <div className="h-8 w-48 rounded bg-zinc-100" />
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="h-72 rounded-xl bg-zinc-100" />
+          <div className="h-72 rounded-xl bg-zinc-100" />
+          <div className="h-72 rounded-xl bg-zinc-100" />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+export function BrowsePlansSection() {
+  return (
+    <Suspense fallback={<BrowsePlansSectionSkeleton />}>
+      <BrowsePlansSectionInner />
+    </Suspense>
   );
 }

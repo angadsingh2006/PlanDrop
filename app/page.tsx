@@ -1,48 +1,45 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { BrowsePlansSection } from "@/components/landing/browse-plans-section";
+import { HeroLocationSearch } from "@/components/landing/hero-location-search";
+import { getHomepageStats } from "@/lib/homepage-stats";
 import { HowItWorksSection } from "@/components/landing/how-it-works-section";
 import { SiteFooter } from "@/components/landing/site-footer";
 import { SiteHeader } from "@/components/landing/site-header";
 
 export default function Home() {
+  const stats = getHomepageStats();
+
   return (
     <>
       <SiteHeader />
 
       <main>
         {/* Hero */}
-        <section className="px-4 pb-16 pt-12 sm:px-6 sm:pb-24 sm:pt-16 lg:px-8">
+        <section
+          id="hero-locate"
+          className="px-4 pb-16 pt-12 sm:px-6 sm:pb-24 sm:pt-16 lg:px-8"
+        >
           <div className="mx-auto max-w-4xl text-center">
             <p className="inline-flex items-center gap-2 rounded-full bg-brand-soft px-4 py-2 text-xs font-bold uppercase tracking-wide text-brand">
               <span className="h-2 w-2 rounded-full bg-brand animate-pulse" aria-hidden />
               Live plans available now
             </p>
-            <h1 className="font-display mt-8 text-[2.375rem] font-bold leading-[1.12] tracking-[-0.02em] text-zinc-900 sm:text-5xl sm:leading-[1.1] lg:text-6xl">
-              Stop planning.
-              <br />
-              Start <span className="text-brand">dropping.</span>
+            <h1 className="font-display mt-8 text-[2rem] font-bold leading-[1.15] tracking-[-0.02em] text-zinc-900 sm:text-[2.75rem] sm:leading-[1.12] lg:text-[3.25rem]">
+              What are we doing{" "}
+              <span className="text-brand">tonight?</span>
             </h1>
             <p className="mx-auto mt-6 max-w-xl text-base leading-relaxed text-zinc-600 sm:text-lg">
-              Ready-made plans for your crew, generated fresh and dropped daily.
-              Claim one before someone else does — then just show up and have
-              fun.
+              Search your city or use your location to see curated hangs you can
+              claim in one tap—no spreadsheet required.
             </p>
-            <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-              <Link
-                href="/plans"
-                className="inline-flex items-center justify-center gap-2 rounded-full bg-brand px-8 py-4 text-base font-bold text-white shadow-xl shadow-brand/20 transition-all hover:-translate-y-0.5 hover:bg-brand-hover hover:shadow-brand/30"
-              >
-                Browse plans near me
-                <span aria-hidden>→</span>
-              </Link>
-              <span className="text-sm font-medium text-zinc-500">+ No account needed</span>
-            </div>
+            <HeroLocationSearch />
 
-            <div className="mx-auto mt-20 grid max-w-3xl grid-cols-3 gap-6 rounded-3xl bg-zinc-50 p-8 shadow-sm ring-1 ring-zinc-100 sm:p-10">
+            <div className="mx-auto mt-14 grid max-w-3xl grid-cols-1 gap-5 rounded-2xl border border-zinc-200/70 bg-zinc-50/90 p-6 shadow-sm ring-1 ring-zinc-100/80 sm:mt-16 sm:grid-cols-3 sm:gap-6 sm:p-8">
               {[
-                ["48", "Plans live today"],
-                ["12", "Cities dropping"],
-                ["~2 hr", "Avg plan length"],
+                [String(stats.plansLiveToday), "Plans live today"],
+                [String(stats.citiesDropping), "Cities dropping"],
+                [stats.avgPlanLength, "Avg plan length"],
               ].map(([n, l]) => (
                 <div key={l} className="text-center">
                   <p className="font-display text-2xl font-semibold tabular-nums text-brand sm:text-4xl">
@@ -59,7 +56,9 @@ export default function Home() {
 
         <HowItWorksSection />
 
-        <BrowsePlansSection />
+        <Suspense fallback={null}>
+          <BrowsePlansSection />
+        </Suspense>
 
         {/* For groups */}
         <section
@@ -90,10 +89,10 @@ export default function Home() {
                 Stop the &ldquo;what do you want to do?&rdquo; loop. Drop in now.
               </p>
               <Link
-                href="/plans"
+                href="/#hero-locate"
                 className="mt-10 inline-flex items-center justify-center gap-2 rounded-full bg-white px-10 py-5 text-lg font-bold text-brand shadow-xl transition-all hover:scale-105 hover:bg-zinc-50 hover:shadow-2xl"
               >
-                Browse plans near me
+                Find plans near you
                 <span aria-hidden>→</span>
               </Link>
               <p className="mt-6 text-sm font-medium text-white/80">
