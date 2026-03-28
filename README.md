@@ -1,123 +1,34 @@
 # PlanDrop
 
-**Friend-group activities, first come first served.** Browse a live pool of AI-curated plans for your area, claim one before someone else does, and share the group link—no blank itinerary, no endless “what do you want to do?”
+**Friend-group activities, first come first served.** Pick your area, browse a live pool of AI-made plans, claim one before another group does, then share the link so everyone sees the same itinerary—no more “what do you want to do?” loops.
 
-Built in 12 hours for Hackathon 2026.
+Hackathon 2026 · built in 12 hours.
 
----
+## What it is
 
-## What is PlanDrop?
+PlanDrop is **curated group outings with scarcity**: each plan in the pool is **one-of-a-kind for your area**—when a group claims it, it’s **gone** for everyone else. That urgency cuts through indecision without you having to build a plan from scratch.
 
-PlanDrop is like **Airbnb Experiences meets a flash sale**. A curated set of plans drops for a given area. Each plan is unique and can only be claimed by **one group**. Once it’s gone, it’s gone.
+## Why it exists
 
-That scarcity kills decision paralysis: you pick from ready-made options instead of starting from zero.
-
-## The problem
-
-Planning with a group usually looks like this:
-
-- “What do you want to do tonight?”
-- “I don’t know, what do you want to do?”
-- Half an hour later, pizza wins again.
-
-Blank tools are too much work; generic venue lists aren’t curated for *your* group. PlanDrop offers **ready-to-go plans** and **urgency through scarcity**—not pressure, just a clear pool of options.
+Group planning often stalls on empty calendars and vague ideas. PlanDrop gives **ready-made options** (vibe, duration, stops, rough cost) so your crew can decide fast and actually go do something.
 
 ## How it works
 
-1. Open PlanDrop and **drop a pin** or enter your area.
-2. **Browse** a live grid—each card shows vibe, duration, group size, and key stops.
-3. Hit **Claim** on the plan your group wants. It’s **locked to you** immediately.
-4. **Share** the group link so friends see the full plan: venues, timing, what to expect at each stop.
-5. Go have fun.
+1. Set your area.
+2. Browse available plans and pick one your group likes.
+3. **Claim** it—your group locks that plan.
+4. Share the link so friends see the full outing.
+5. Show up and enjoy.
 
-If your first choice is taken, the next best plan is right there.
+## Tech
 
-## The claim system
+Next.js, Supabase, Claude, deployed on Vercel. Anonymous sessions—no accounts required for the demo.
 
-The differentiator is **atomic claiming**: one database transaction checks availability and locks the plan at the same time—**no race conditions, no double-bookings**.
+## What to know
 
-**Supabase Realtime** pushes updates so anyone watching sees a plan flip to “Claimed” instantly—ideal for the demo (two browsers side by side).
-
-Plans that aren’t claimed can be refreshed for the next day so the pool stays fresh.
-
-## What’s in a plan?
-
-Plans are **pre-generated with Claude** (not per-request in the hot path), structured as roughly **2–4 hour** itineraries:
-
-| Element | Example |
-|--------|---------|
-| Vibe | Chill, Active, Foodie, Adventurous |
-| Group size | 2, 4, 6+ |
-| Stops | 3–4: venue, what to do, suggested timing |
-| Cost | Estimated per person |
-| Hook | One-line “why this works” |
-
-## Tech stack
-
-| Layer | Choice |
-|--------|--------|
-| Frontend | Next.js 14 (App Router) + Tailwind CSS |
-| API | Next.js API routes (serverless) |
-| Database | Supabase (Postgres + Realtime + RLS) |
-| AI | Claude API (`claude-sonnet-4-6`) |
-| Deployment | Vercel + Supabase cloud |
-| Auth | Supabase anonymous sessions (no login required for MVP) |
-
-## MVP scope
-
-**Must ship**
-
-- Plan browsing grid with **vibe** and **group size** filters
-- **Atomic claim** with **real-time** “claimed” state
-- **Shareable group URL** with full plan detail
-- **20–30** pre-generated plans for **one demo area**
-
-**Nice to have**
-
-- Live “viewing this plan” counter
-- Countdown when few plans remain
-- Multiple cities/areas
-
-**Out of scope (for now)**
-
-- User accounts / profiles
-- Ratings and reviews
-- Native mobile app (web-first)
-- Payments / bookings
-
-## Team split (4 people)
-
-| Person | Focus |
-|--------|--------|
-| 1 | Supabase schema, atomic claim function, seed plans (20–30) |
-| 2 | Claude integration, prompts, `/api/plans` and `/api/claim` |
-| 3 | Browse UI, claim button, Realtime for live badges |
-| 4 | Plan detail page, shareable URL, Tailwind polish |
-
-**Integration:** P1 + P2 wire DB ↔ API around **hour 3**. P3 + P4 connect UI to live API once stable; polish and edge cases **hours 6–10**.
-
-## 12-hour timeline (high level)
-
-| Phase | Hours | Goals |
-|-------|--------|--------|
-| Setup | 0–0.5 | Repo, Supabase, Vercel; everyone cloned |
-| Parallel build | 0.5–3 | Schema/seed, Claude + routes, browse scaffold, routing + styling |
-| Integration | 3–6 | Wire API to DB; UI to endpoints; fix contract mismatches |
-| Polish + test | 6–10 | Realtime demo; race/empty states; mobile |
-| Demo prep | 10–12 | Rehearse claim moment, fresh seed, pitch, last bugs |
-
-## The demo moment
-
-**Two browser windows side by side:** in window A, claim a plan. In window B, watch it disappear or show **Claimed** **immediately**. No narration required—the mechanic is obvious in seconds.
-
-**Before presenting:** seed the demo area with **6–8** varied plans; include **at least two** clearly different vibes so the grid looks rich.
+- Plans are **generated ahead of time** so browsing stays fast; claiming updates **live** for everyone looking at the pool.
+- **Web-first** MVP—focus is the shared claim-and-share experience, not bookings or payments.
 
 ---
 
-## Development
-
-Clone the repo, configure environment variables for Supabase and Claude per project docs, then install dependencies and run the dev server when the app scaffold is in place.
-
----
-
-*PlanDrop — Hackathon 2026. Ready to drop.*
+*PlanDrop — ready to drop.*
