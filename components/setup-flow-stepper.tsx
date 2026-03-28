@@ -7,7 +7,7 @@ import { buildPlansHref, getStoredArea } from "@/lib/claim-storage";
 const STEP_LABELS = [
   { step: 1 as const, title: "Drop a pin", path: "/drop" },
   { step: 2 as const, title: "Browse the drop", path: "/plans" },
-  { step: 3 as const, title: "Claim it fast", path: "claim" },
+  { step: 3 as const, title: "Lock it in", path: "claim" },
   { step: 4 as const, title: "Just show up", path: "go" },
 ];
 
@@ -77,7 +77,7 @@ export function SetupFlowStepper({
                     isCurrent
                       ? "bg-brand text-white"
                       : isPast
-                        ? "bg-emerald-100 text-emerald-800"
+                        ? "bg-brand-soft text-brand"
                         : "bg-zinc-100 text-zinc-500"
                   }`}
                 >

@@ -24,6 +24,7 @@ import { ClaimBanModal } from "@/components/claim-ban-modal";
 import { UnclaimConfirmModal } from "@/components/unclaim-confirm-modal";
 import { HugeIcon } from "@/components/ui/huge-icon";
 import { useClaimedPlanId } from "@/hooks/use-claimed-plan-id";
+import { useLiveViewingCount } from "@/hooks/use-live-viewing-count";
 import { PlanImageGallery } from "@/components/plan-image-gallery";
 import { buildClaimHref, buildGoHref } from "@/lib/claim-links";
 import { buildGoogleMapsHref } from "@/lib/maps-links";
@@ -32,11 +33,13 @@ import { activityBulletsForDisplay } from "@/lib/plan-display";
 import { planPhotoCount } from "@/lib/plan-cover";
 import {
   getStoredAiPlan,
+  getStoredArea,
   getStoredPin,
   isClaimBanned,
   releaseClaim,
   setStoredAiPlansMap,
   setStoredArea,
+  buildPlansHref,
 } from "@/lib/claim-storage";
 import type { Plan } from "@/lib/plans-data";
 import { PLANS, getPlanById } from "@/lib/plans-data";
@@ -93,8 +96,7 @@ function PlanDetailModal({
   const claimHref = buildClaimHref(plan, area);
   const goHref = buildGoHref(plan, area);
   const isMine = claimedId === plan.id;
-  const hasOtherClaim =
-    claimedId !== null && claimedId !== plan.id && plan.available;
+  const hasOtherClaim = claimedId !== null && claimedId !== plan.id;
   const claimedPlanResolved =
     claimedId != null
       ? (getPlanById(claimedId) ?? getStoredAiPlan(claimedId))
@@ -112,7 +114,7 @@ function PlanDetailModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="relative z-10 flex max-h-[min(92vh,720px)] min-h-0 w-[min(100%,min(96vw,960px))] flex-col overflow-hidden rounded-xl bg-white shadow-2xl ring-1 ring-zinc-200/80 sm:max-h-[min(92vh,720px)] sm:flex-row sm:items-start"
+        className="relative z-10 flex max-h-[min(92vh,720px)] min-h-0 w-[min(100%,min(96vw,960px))] flex-col overflow-hidden rounded-xl bg-white shadow-2xl ring-1 ring-zinc-200/80 sm:max-h-[min(92vh,720px)] sm:flex-row sm:items-stretch"
       >
         <button
           type="button"
@@ -123,8 +125,8 @@ function PlanDetailModal({
           <HugeIcon icon={Cancel01Icon} size={18} strokeWidth={2} />
         </button>
 
-        <div className="relative w-full shrink-0 overflow-hidden bg-zinc-100 sm:w-[min(56%,580px)] sm:max-w-[600px] sm:min-w-[400px] sm:flex-none">
-          <div className="relative aspect-[5/3] w-full sm:aspect-[16/10] sm:max-h-[min(58vh,520px)]">
+        <div className="relative flex min-h-0 w-full shrink-0 flex-col overflow-hidden bg-zinc-100 sm:w-[min(56%,580px)] sm:max-w-[600px] sm:min-w-[400px] sm:flex-none sm:self-stretch">
+          <div className="relative aspect-[5/3] w-full sm:aspect-auto sm:min-h-0 sm:flex-1">
             <PlanImageGallery plan={plan} variant="modal" priority />
             <p className="pointer-events-none absolute bottom-2 left-2.5 right-20 z-10 text-[9px] font-medium text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)] sm:bottom-3 sm:right-24 sm:text-[10px]">
               {photoCreditDisplay(plan.photoCredit)}
@@ -241,18 +243,9 @@ function PlanDetailModal({
                   onClick={onUnclaimRequest}
                   className="w-full rounded-lg border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
                 >
-                  Unclaim
+                  Release plan
                 </button>
               </div>
-            ) : !plan.available ? (
-              <button
-                type="button"
-                disabled
-                className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-zinc-100 px-4 py-2.5 text-sm font-bold text-zinc-400"
-              >
-                <HugeIcon icon={CheckmarkCircle02Icon} size={16} />
-                Claimed
-              </button>
             ) : hasOtherClaim ? (
               <div className="flex flex-col gap-2">
                 <p className="text-center text-xs text-zinc-500">
@@ -267,16 +260,25 @@ function PlanDetailModal({
                   onClick={onClose}
                   className="block w-full rounded-lg border border-zinc-200 bg-white px-4 py-2.5 text-center text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
                 >
-                  Open it
+                  Open your plan
                 </Link>
                 <button
                   type="button"
                   onClick={onUnclaimRequest}
                   className="w-full rounded-lg border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
                 >
-                  Unclaim my plan
+                  Release plan
                 </button>
               </div>
+            ) : !plan.available ? (
+              <button
+                type="button"
+                disabled
+                className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-zinc-100 px-4 py-2.5 text-sm font-bold text-zinc-400"
+              >
+                <HugeIcon icon={CheckmarkCircle02Icon} size={16} />
+                Claimed
+              </button>
             ) : (
               <Link
                 href={claimHref}
@@ -320,6 +322,47 @@ function formatAreaDisplay(area: string): string {
     .join(", ");
 }
 
+function PlanCardRightBadges({
+  plan,
+  eligible,
+}: {
+  plan: Plan;
+  eligible: boolean;
+}) {
+  const photoCount = planPhotoCount(plan);
+  const viewers = useLiveViewingCount(
+    plan.id,
+    eligible && plan.viewing != null ? plan.viewing : undefined,
+  );
+
+  if (!eligible) return null;
+
+  const showGallery = photoCount > 1;
+  const showViewers = viewers != null;
+
+  if (!showGallery && !showViewers) return null;
+
+  const pill =
+    "inline-flex items-center gap-1 rounded-full bg-black/45 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white ring-1 ring-white/25 backdrop-blur-sm tabular-nums";
+
+  return (
+    <div className="absolute right-2 top-2 z-[1] flex flex-col items-end gap-1.5">
+      {showGallery ? (
+        <span className={pill}>
+          <HugeIcon icon={Image01Icon} size={10} aria-hidden />
+          {photoCount}
+        </span>
+      ) : null}
+      {showViewers ? (
+        <span className={pill} aria-live="polite" aria-atomic="true">
+          <HugeIcon icon={EyeIcon} size={10} aria-hidden />
+          {viewers}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
 function planMatchesFilter(plan: Plan, filterId: string): boolean {
   switch (filterId) {
     case "all":
@@ -343,17 +386,29 @@ function planMatchesFilter(plan: Plan, filterId: string): boolean {
 
 function BrowsePlansSectionInner() {
   const searchParams = useSearchParams();
-  const area = searchParams.get("area");
-  const areaTrim = area?.trim() ?? "";
+  const urlArea = searchParams.get("area")?.trim() ?? "";
+  const [storageArea, setStorageArea] = useState("");
 
   useEffect(() => {
-    if (areaTrim) setStoredArea(areaTrim);
-  }, [areaTrim]);
+    if (urlArea) {
+      setStoredArea(urlArea);
+      setStorageArea("");
+    } else {
+      setStorageArea(getStoredArea()?.trim() ?? "");
+    }
+  }, [urlArea]);
+
+  const areaTrim = urlArea || storageArea;
 
   const claimedId = useClaimedPlanId();
+  /** No `?area=` and no saved search: show the static Atlanta demo catalog honestly. */
+  const isDemoCatalog = !areaTrim;
   const areaLabel = useMemo(
-    () => formatAreaDisplay(areaTrim || "Atlanta, GA"),
-    [areaTrim],
+    () =>
+      isDemoCatalog
+        ? formatAreaDisplay("Atlanta, GA")
+        : formatAreaDisplay(areaTrim),
+    [areaTrim, isDemoCatalog],
   );
 
   const [active, setActive] = useState<string>("all");
@@ -415,12 +470,17 @@ function BrowsePlansSectionInner() {
   }, [areaTrim]);
 
   const boardPlans = useMemo(() => {
-    if (areaTrim) {
-      if (aiPlans && aiPlans.length > 0) return aiPlans;
-      if (aiLoading) return [];
+    if (!areaTrim) {
       return PLANS;
     }
-    return PLANS;
+    if (aiLoading) {
+      return [];
+    }
+    if (aiPlans && aiPlans.length > 0) {
+      return aiPlans;
+    }
+    /* Area is set (from URL or session) but AI did not return plans — do not show Atlanta demo. */
+    return [];
   }, [areaTrim, aiPlans, aiLoading]);
 
   const filteredPlans = useMemo(
@@ -439,6 +499,31 @@ function BrowsePlansSectionInner() {
   );
 
   const areaForLinks = areaTrim || null;
+
+  const openTonightBanner = useMemo(() => {
+    if (aiLoading && areaTrim) {
+      return { mode: "loading" as const };
+    }
+    if (areaTrim && boardPlans.length === 0) {
+      return { mode: "none" as const };
+    }
+    if (openTonight === 0) {
+      return { mode: "all_claimed" as const };
+    }
+    return { mode: "open" as const, n: openTonight };
+  }, [aiLoading, areaTrim, boardPlans.length, openTonight]);
+
+  const lockedPlan = useMemo(() => {
+    if (!claimedId) return null;
+    return getPlanById(claimedId) ?? getStoredAiPlan(claimedId) ?? null;
+  }, [claimedId]);
+
+  const lockedPlanGoHref =
+    lockedPlan != null
+      ? buildGoHref(lockedPlan, areaForLinks)
+      : claimedId
+        ? `/go/${claimedId}`
+        : "#";
 
   function onClaimClick(e: React.MouseEvent) {
     if (isClaimBanned()) {
@@ -499,12 +584,12 @@ function BrowsePlansSectionInner() {
                 className="relative mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-soft ring-1 ring-brand/15 sm:mt-0"
                 aria-hidden
               >
-                <span className="absolute inline-flex h-2.5 w-2.5 animate-ping rounded-full bg-emerald-400/70" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.65)]" />
+                <span className="absolute inline-flex h-2.5 w-2.5 animate-ping rounded-full bg-brand/45" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-brand shadow-[0_0_10px_rgba(43,83,193,0.55)]" />
               </span>
               <div className="min-w-0">
                 <p className="text-sm leading-snug text-zinc-800 sm:text-[15px]">
-                  <span className="mr-2 inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 align-middle text-[10px] font-bold uppercase tracking-wider text-emerald-800 ring-1 ring-emerald-200/90">
+                  <span className="mr-2 inline-flex items-center rounded-full bg-brand-soft px-2 py-0.5 align-middle text-[10px] font-bold uppercase tracking-wider text-brand ring-1 ring-brand/25">
                     Live
                   </span>
                   Plans are dropping in{" "}
@@ -521,14 +606,18 @@ function BrowsePlansSectionInner() {
                 aria-live="polite"
                 aria-atomic="true"
                 className={`inline-flex h-10 items-center rounded-full border px-3 text-xs font-semibold tabular-nums sm:px-3.5 sm:text-sm ${
-                  openTonight === 0
-                    ? "border-zinc-200 bg-zinc-100/80 text-zinc-600"
-                    : "border-emerald-200/90 bg-emerald-50 text-emerald-900"
+                  openTonightBanner.mode === "open"
+                    ? "border-brand/25 bg-brand-soft text-brand"
+                    : "border-zinc-200 bg-zinc-100/80 text-zinc-600"
                 }`}
               >
-                {openTonight === 0
-                  ? "Tonight: all claimed"
-                  : `${openTonight} open tonight`}
+                {openTonightBanner.mode === "loading"
+                  ? "Loading plans…"
+                  : openTonightBanner.mode === "none"
+                    ? "No plans loaded yet"
+                    : openTonightBanner.mode === "all_claimed"
+                      ? "Tonight: all claimed"
+                      : `${openTonightBanner.n} open tonight`}
               </span>
               <Link
                 href={
@@ -565,18 +654,68 @@ function BrowsePlansSectionInner() {
               Available plans tonight
             </h2>
             {aiError ? (
-              <p className="mt-2 text-sm font-medium text-amber-800">
-                {aiError} Showing the demo catalog for now.
+              <p className="mt-2 text-sm font-medium text-amber-800">{aiError}</p>
+            ) : null}
+            {isDemoCatalog ? (
+              <p className="mt-2 text-xs text-zinc-500">
+                Demo stops are in Atlanta. Search above to generate plans for your
+                city.
               </p>
             ) : null}
           </div>
-          <Link
-            href="/plans"
-            className="shrink-0 self-start text-sm font-semibold text-zinc-900 underline decoration-zinc-400 underline-offset-4 transition hover:decoration-brand hover:text-brand sm:mt-8"
-          >
-            Show all {boardPlans.length} plans →
-          </Link>
+          {boardPlans.length > 0 ? (
+            <Link
+              href={areaTrim ? buildPlansHref(areaTrim) : "/plans"}
+              className="shrink-0 self-start text-sm font-semibold text-zinc-900 underline decoration-zinc-400 underline-offset-4 transition hover:decoration-brand hover:text-brand sm:mt-8"
+            >
+              Show all {boardPlans.length} plans →
+            </Link>
+          ) : areaTrim && !aiLoading ? (
+            <Link
+              href="/#hero-locate"
+              className="shrink-0 self-start text-sm font-semibold text-brand underline decoration-brand/30 underline-offset-4 transition hover:decoration-brand sm:mt-8"
+            >
+              Try another location →
+            </Link>
+          ) : null}
         </div>
+
+        {claimedId ? (
+          <div className="mb-8 flex flex-col gap-3 rounded-2xl border border-brand/25 bg-gradient-to-br from-brand-soft/50 to-white px-4 py-4 shadow-sm ring-1 ring-brand/10 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5 sm:py-4">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-zinc-900">
+                You have a plan locked this session
+              </p>
+              <p className="mt-1 text-xs leading-relaxed text-zinc-600">
+                {lockedPlan ? (
+                  <>
+                    <span className="font-medium text-zinc-800">
+                      {lockedPlan.title}
+                    </span>
+                    {" · Release it anytime if you want a different spot."}
+                  </>
+                ) : (
+                  "Release it anytime if you want a different spot."
+                )}
+              </p>
+            </div>
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:shrink-0">
+              <Link
+                href={lockedPlanGoHref}
+                className="inline-flex h-10 w-full items-center justify-center rounded-xl border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-900 shadow-sm transition hover:bg-zinc-50 sm:w-auto sm:min-w-[9rem]"
+              >
+                Open plan
+              </Link>
+              <button
+                type="button"
+                onClick={() => setUnclaimOpen(true)}
+                className="inline-flex h-10 w-full items-center justify-center rounded-xl border border-zinc-300 bg-white px-4 text-sm font-bold text-zinc-900 shadow-sm transition hover:bg-zinc-50 sm:w-auto sm:min-w-[9rem]"
+              >
+                Release plan
+              </button>
+            </div>
+          </div>
+        ) : null}
 
         <div className="no-scrollbar mb-10 flex flex-wrap gap-2">
           {filters.map((f) => (
@@ -610,7 +749,16 @@ function BrowsePlansSectionInner() {
               </p>
             </div>
           ) : null}
-          {!aiLoading && filteredPlans.length === 0 ? (
+          {!aiLoading && areaTrim && boardPlans.length === 0 ? (
+            <p className="col-span-full rounded-xl border border-dashed border-zinc-200 bg-zinc-50 px-5 py-10 text-center text-sm text-zinc-600">
+              {aiError
+                ? "Fix the issue above, or search again from the top of the page."
+                : "No plans were returned for this area. Try a broader city name or search again."}
+            </p>
+          ) : null}
+          {!aiLoading &&
+          boardPlans.length > 0 &&
+          filteredPlans.length === 0 ? (
             <p className="col-span-full rounded-xl border border-dashed border-zinc-200 bg-zinc-50 px-5 py-10 text-center text-sm text-zinc-600">
               No plans match this filter. Try{" "}
               <button
@@ -626,11 +774,9 @@ function BrowsePlansSectionInner() {
           {!aiLoading &&
             filteredPlans.map((plan) => {
             const isMine = claimedId === plan.id;
-            const hasOtherClaim =
-              claimedId !== null && claimedId !== plan.id && plan.available;
+            const hasOtherClaim = claimedId !== null && claimedId !== plan.id;
             const lockedByOthers = !plan.available && !isMine;
 
-            const photoCount = planPhotoCount(plan);
             return (
             <article
               key={plan.id}
@@ -655,22 +801,12 @@ function BrowsePlansSectionInner() {
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-1 rounded-full bg-black/75 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white backdrop-blur-sm">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.95)]" />
+                      <span className="h-1.5 w-1.5 rounded-full bg-brand shadow-[0_0_8px_rgba(43,83,193,0.85)]" />
                       Live
                     </span>
                   )}
                 </div>
-                {photoCount > 1 && plan.available && !isMine ? (
-                  <span className="absolute right-2 top-2 z-[1] inline-flex items-center gap-1 rounded-full bg-black/45 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white ring-1 ring-white/25 backdrop-blur-sm">
-                    <HugeIcon icon={Image01Icon} size={10} aria-hidden />
-                    {photoCount}
-                  </span>
-                ) : plan.viewing != null && plan.available && !isMine ? (
-                  <span className="absolute right-2 top-2 z-[1] inline-flex items-center gap-1 rounded-full bg-black/45 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white ring-1 ring-white/25 backdrop-blur-sm">
-                    <HugeIcon icon={EyeIcon} size={10} aria-hidden />
-                    {plan.viewing}
-                  </span>
-                ) : null}
+                <PlanCardRightBadges plan={plan} eligible={plan.available && !isMine} />
                 <p className="pointer-events-none absolute bottom-2 left-2 right-2 z-[1] text-[10px] font-medium leading-snug text-white drop-shadow-sm">
                   {photoCreditDisplay(plan.photoCredit)}
                 </p>
@@ -758,18 +894,9 @@ function BrowsePlansSectionInner() {
                           onClick={() => setUnclaimOpen(true)}
                           className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-xs font-semibold text-zinc-800 transition hover:bg-zinc-50"
                         >
-                          Unclaim
+                          Release plan
                         </button>
                       </div>
-                    ) : !plan.available ? (
-                      <button
-                        type="button"
-                        disabled
-                        className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-zinc-200 bg-zinc-100 px-3 py-2.5 text-xs font-bold text-zinc-500 sm:order-2 sm:w-auto"
-                      >
-                        <HugeIcon icon={CheckmarkCircle02Icon} size={12} />
-                        Claimed
-                      </button>
                     ) : hasOtherClaim ? (
                       <div className="flex w-full flex-col gap-2 sm:order-2 sm:w-auto sm:min-w-[200px]">
                         <button
@@ -784,9 +911,18 @@ function BrowsePlansSectionInner() {
                           onClick={() => setUnclaimOpen(true)}
                           className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-xs font-semibold text-zinc-800 transition hover:bg-zinc-50"
                         >
-                          Unclaim my plan
+                          Release plan
                         </button>
                       </div>
+                    ) : !plan.available ? (
+                      <button
+                        type="button"
+                        disabled
+                        className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-zinc-200 bg-zinc-100 px-3 py-2.5 text-xs font-bold text-zinc-500 sm:order-2 sm:w-auto"
+                      >
+                        <HugeIcon icon={CheckmarkCircle02Icon} size={12} />
+                        Claimed
+                      </button>
                     ) : (
                       <Link
                         href={buildClaimHref(plan, areaForLinks)}

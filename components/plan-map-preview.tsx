@@ -30,8 +30,7 @@ const mapFrameClass = (variant: "modal" | "go") =>
 
 /**
  * Interactive Google Map (Embed API) when a browser key is set.
- * Layers `/api/static-map` under the iframe so a real map image shows immediately while the embed loads.
- * Static-only path uses <img> (not next/image) for PNG/SVG from the proxy.
+ * Layers `/api/static-map` under the iframe so map tiles show while the embed loads.
  */
 export function PlanMapPreview({
   plan,
@@ -46,25 +45,24 @@ export function PlanMapPreview({
   if (embedSrc) {
     return (
       <div
-        className={`overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950 shadow-sm ring-1 ring-zinc-800/80 ${variant === "go" ? "max-w-sm" : ""} ${className}`}
+        className={`overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm ring-1 ring-zinc-100 ${variant === "go" ? "max-w-sm" : ""} ${className}`}
       >
-        <div className="border-b border-zinc-800 px-3 py-2.5">
-          <p className="text-sm font-medium leading-snug text-white">
-            <span className="mr-2 text-zinc-500" aria-hidden>
+        <div className="border-b border-zinc-100 bg-zinc-50/90 px-3 py-2.5">
+          <p className="text-sm font-medium leading-snug text-zinc-900">
+            <span className="mr-2 text-zinc-400" aria-hidden>
               ♠
             </span>
             Venue: {plan.title}
           </p>
           {plan.formattedAddress ? (
-            <p className="mt-1.5 text-[11px] leading-snug text-zinc-400">
+            <p className="mt-1.5 text-[11px] leading-snug text-zinc-600">
               {plan.formattedAddress}
             </p>
           ) : null}
         </div>
-        <div className={`relative w-full bg-zinc-900 ${mapFrameClass(variant)}`}>
-          {/* Real map tiles from server (Google Static or OSM) — visible until iframe paints */}
+        <div className={`relative w-full bg-zinc-100 ${mapFrameClass(variant)}`}>
           {staticSrc ? (
-            // eslint-disable-next-line @next/next/no-img-element -- same-origin proxy; avoids Next/Image SVG quirks
+            // eslint-disable-next-line @next/next/no-img-element -- same-origin proxy
             <img
               src={staticSrc}
               alt=""
@@ -74,10 +72,7 @@ export function PlanMapPreview({
               decoding="async"
             />
           ) : (
-            <div
-              className="absolute inset-0 z-0 bg-zinc-800"
-              aria-hidden
-            />
+            <div className="absolute inset-0 z-0 bg-zinc-100" aria-hidden />
           )}
           <iframe
             title={`Map of ${plan.title}`}
@@ -93,7 +88,7 @@ export function PlanMapPreview({
           href={mapsHref}
           target="_blank"
           rel="noopener noreferrer"
-          className="block border-t border-zinc-800 bg-zinc-950 px-2 py-2 text-center text-[9px] font-semibold uppercase tracking-wide text-brand transition hover:bg-zinc-900 hover:text-brand-hover"
+          className="block border-t border-zinc-100 bg-white px-2 py-2 text-center text-[9px] font-semibold uppercase tracking-wide text-brand transition hover:bg-zinc-50"
         >
           Open in Maps
         </Link>

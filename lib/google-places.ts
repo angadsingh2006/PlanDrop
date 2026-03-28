@@ -22,6 +22,8 @@ export type PlaceDetailsEnrichment = {
   formattedAddress?: string;
   openingHoursLine?: string;
   weekdayText?: string[];
+  /** Extra photo refs from Place Details (merged with Text Search for larger galleries). */
+  photoReferences?: string[];
 };
 
 /** Monday-first index (Google weekday_text order for en-US). */
@@ -59,6 +61,7 @@ export async function getPlaceDetails(
     "geometry",
     "formatted_address",
     "opening_hours",
+    "photos",
   ].join(",");
 
   const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${encodeURIComponent(placeId.trim())}&fields=${encodeURIComponent(fields)}&key=${encodeURIComponent(key)}`;
@@ -77,6 +80,7 @@ export async function getPlaceDetails(
         open_now?: boolean;
         weekday_text?: string[];
       };
+      photos?: { photo_reference: string }[];
     };
   };
 
@@ -97,6 +101,12 @@ export async function getPlaceDetails(
     wh?.open_now,
   );
 
+  const photoReferences = (r.photos ?? [])
+    .map((p) => p.photo_reference)
+    .filter((x): x is string => Boolean(x))
+    .filter((x, i, a) => a.indexOf(x) === i)
+    .slice(0, 10);
+
   return {
     mapsUrl: r.url?.trim(),
     lat: typeof lat === "number" && Number.isFinite(lat) ? lat : undefined,
@@ -104,6 +114,8 @@ export async function getPlaceDetails(
     formattedAddress: r.formatted_address?.trim(),
     openingHoursLine,
     weekdayText: wh?.weekday_text,
+    photoReferences:
+      photoReferences.length > 0 ? photoReferences : undefined,
   };
 }
 
@@ -163,7 +175,7 @@ export async function findPlaceByText(
     .map((p) => p.photo_reference)
     .filter((x): x is string => Boolean(x))
     .filter((x, i, a) => a.indexOf(x) === i)
-    .slice(0, 6);
+    .slice(0, 10);
 
   return {
     name: r.name,

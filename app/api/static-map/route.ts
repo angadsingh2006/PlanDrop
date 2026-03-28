@@ -92,7 +92,7 @@ async function geocodeNominatim(
 
 function staticMapUrl(lat: number, lng: number, key: string): string {
   const center = `${lat},${lng}`;
-  const markers = encodeURIComponent(`color:0x4F46E5|${center}`);
+  const markers = encodeURIComponent(`color:0x2B53C1|${center}`);
   return `https://maps.googleapis.com/maps/api/staticmap?center=${encodeURIComponent(center)}&zoom=16&size=512x512&scale=2&maptype=roadmap&markers=${markers}&key=${encodeURIComponent(key)}`;
 }
 
@@ -144,8 +144,8 @@ function svgMapFallback(lat: number, lng: number): Response {
 <svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400">
   <rect fill="#fafafa" width="400" height="400"/>
   <rect fill="#e4e4e7" x="40" y="40" width="320" height="280" rx="12"/>
-  <circle cx="200" cy="150" r="10" fill="#4F46E5"/>
-  <path d="M200 160 L200 230" stroke="#4F46E5" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <circle cx="200" cy="150" r="10" fill="#2B53C1"/>
+  <path d="M200 160 L200 230" stroke="#2B53C1" stroke-width="4" fill="none" stroke-linecap="round"/>
   <text x="200" y="300" text-anchor="middle" font-family="ui-sans-serif,system-ui,sans-serif" font-size="14" fill="#3f3f46">${safeLat}, ${safeLng}</text>
   <text x="200" y="328" text-anchor="middle" font-family="ui-sans-serif,system-ui,sans-serif" font-size="12" fill="#71717a">Open in Maps for full map</text>
 </svg>`;

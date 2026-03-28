@@ -130,7 +130,7 @@ async function enrichPlanWithGooglePlace(
   const cityLine = area.split(",")[0]?.trim() || area;
   const activityBullets = plan.locationDetails.slice(0, 4).filter(Boolean);
 
-  const refs =
+  const searchRefs =
     place.photoRefs && place.photoRefs.length > 0
       ? place.photoRefs
       : place.photoRef
@@ -145,6 +145,18 @@ async function enrichPlanWithGooglePlace(
       detailsExtra = null;
     }
   }
+
+  const detailRefs = detailsExtra?.photoReferences ?? [];
+  const mergedRefs: string[] = [];
+  const seenRef = new Set<string>();
+  for (const r of [...searchRefs, ...detailRefs]) {
+    const t = r?.trim();
+    if (t && !seenRef.has(t)) {
+      seenRef.add(t);
+      mergedRefs.push(t);
+    }
+  }
+  const refs = mergedRefs.slice(0, 12);
 
   const formattedAddress =
     detailsExtra?.formattedAddress?.trim() || place.formattedAddress;
@@ -195,7 +207,7 @@ export async function generateAiPlansForArea(
 
   const locHint =
     lat != null && lng != null
-      ? `User coordinates (bias search): ${lat.toFixed(4)}, ${lng.toFixed(4)}.`
+      ? `User coordinates (bias search): ${lat.toFixed(4)}, ${lng.toFixed(4)}. Use them with the place name to judge how dense the destination is—dense urban cores can support more distinct venues; exurban or rural pins should usually mean fewer plans.`
       : "";
 
   const prompt = `You are a local outing planner for "${trimmedArea}".
@@ -205,7 +217,8 @@ Return ONLY valid JSON (no markdown outside the JSON) with this exact shape:
 {"plans":[{"title":"string","tagline":"string","priceEstimate":"string like ~$35/pp","vibe":"chill|active|foodie|adv","minGroup":number,"maxGroup":number,"duration":"string like 2.5 hrs","meetTime":"string like 6:30 PM","primaryPlaceName":"string","locationDetails":["string","string","string","string"],"photoCredit":"short label"}]}
 
 STRICT RULES (must follow):
-- Output exactly 4 plans. Mix the four vibes across them.
+- Output between 2 and 8 plans. Choose how many based on the area: dense cities and major destinations usually support more distinct real venues for one evening; small towns, very suburban, or sparse areas should have fewer—only as many as you can make strong and non-redundant. Never pad with weak plans or duplicate the same kind of night twice.
+- Across the plans you include, diversify vibes (chill, active, foodie, adv) as much as the count allows—use each vibe at most once when you have enough plans; if you output fewer than four plans, prioritize variety over covering every vibe.
 - Each plan must be anchored to ONE real venue or park that exists in or near "${trimmedArea}" and can be found on Google Maps.
 - primaryPlaceName MUST be the official name as listed on Google Maps (e.g. "Ponce City Market", "Piedmont Park", "Krog Street Market", "Mercedes-Benz Stadium"). Not a made-up place name.
 - title and tagline MUST describe that same primaryPlaceName only. Do not title a plan after Neighborhood A while primaryPlaceName is a venue in Neighborhood B.
@@ -254,7 +267,11 @@ STRICT RULES (must follow):
     throw new Error("No plans in response");
   }
 
-  const rawList = parsed.plans.slice(0, 6);
+  if (parsed.plans.length < 2) {
+    throw new Error("Expected at least two plans for this area");
+  }
+
+  const rawList = parsed.plans.slice(0, 8);
   return Promise.all(
     rawList.map(async (raw, i) => {
       const base = toPlan(raw, i);

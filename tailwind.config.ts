@@ -9,9 +9,10 @@ const config: Config = {
     extend: {
       colors: {
         brand: {
-          DEFAULT: "#4F46E5",
-          hover: "#4338CA",
-          soft: "#EEF2FF",
+          DEFAULT: "rgb(var(--brand-rgb) / <alpha-value>)",
+          hover: "rgb(var(--brand-hover-rgb) / <alpha-value>)",
+          soft: "rgb(var(--brand-soft-rgb) / <alpha-value>)",
+          light: "rgb(var(--brand-light-rgb) / <alpha-value>)",
         },
         navy: {
           DEFAULT: "#0F172A",

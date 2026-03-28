@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { BrowsePlansSection } from "@/components/landing/browse-plans-section";
+import { HeroHeadline } from "@/components/landing/hero-headline";
 import { HeroLocationSearch } from "@/components/landing/hero-location-search";
 import { getHomepageStats } from "@/lib/homepage-stats";
 import { HowItWorksSection } from "@/components/landing/how-it-works-section";
@@ -25,13 +26,10 @@ export default function Home() {
               <span className="h-2 w-2 rounded-full bg-brand animate-pulse" aria-hidden />
               Live plans available now
             </p>
-            <h1 className="font-display mt-8 text-[2rem] font-bold leading-[1.15] tracking-[-0.02em] text-zinc-900 sm:text-[2.75rem] sm:leading-[1.12] lg:text-[3.25rem]">
-              What are we doing{" "}
-              <span className="text-brand">tonight?</span>
-            </h1>
+            <HeroHeadline />
             <p className="mx-auto mt-6 max-w-xl text-base leading-relaxed text-zinc-600 sm:text-lg">
-              Search your city or use your location to see curated hangs you can
-              claim in one tap—no spreadsheet required.
+              Enter your city or turn on location—browse plans you can claim in
+              one tap. No spreadsheet. No group-chat meltdown.
             </p>
             <HeroLocationSearch />
 
@@ -80,7 +78,7 @@ export default function Home() {
         {/* Gradient CTA */}
         <section className="px-4 pb-0 pt-4 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-5xl overflow-hidden rounded-t-[2.5rem] bg-brand px-6 py-20 text-center shadow-2xl sm:px-12 sm:py-24 relative">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,_var(--tw-gradient-stops))] from-indigo-400 via-brand to-brand-hover opacity-80" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,_var(--tw-gradient-stops))] from-brand-light via-brand to-brand-hover opacity-80" />
             <div className="relative">
               <h2 className="font-display text-3xl font-bold leading-snug tracking-[-0.02em] text-white sm:text-5xl">
                 Your group&apos;s next move is waiting.
@@ -102,7 +100,7 @@ export default function Home() {
           </div>
         </section>
 
-        <div className="h-3 bg-gradient-to-r from-indigo-400 via-brand to-brand-hover" aria-hidden />
+        <div className="h-3 bg-gradient-to-r from-brand-light via-brand to-brand-hover" aria-hidden />
       </main>
 
       <SiteFooter />

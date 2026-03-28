@@ -1,9 +1,14 @@
 "use client";
 
-import { CheckmarkCircle02Icon, ZapIcon } from "@hugeicons/core-free-icons";
+import { CheckmarkCircle02Icon, MapsIcon, ZapIcon } from "@hugeicons/core-free-icons";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import {
+  canShowPlanMapPreview,
+  PlanMapPreview,
+} from "@/components/plan-map-preview";
+import { PlanImageGallery } from "@/components/plan-image-gallery";
 import { SetupFlowStepper } from "@/components/setup-flow-stepper";
 import { SiteFooter } from "@/components/landing/site-footer";
 import { SiteHeader } from "@/components/landing/site-header";
@@ -19,6 +24,8 @@ import {
   setClaimedPlanId,
 } from "@/lib/claim-storage";
 import { buildGoHref } from "@/lib/claim-links";
+import { buildGoogleMapsHref } from "@/lib/maps-links";
+import { activityBulletsForDisplay } from "@/lib/plan-display";
 import { planToSnapshot, snapshotToPlan } from "@/lib/plan-snapshot";
 import type { Plan } from "@/lib/plans-data";
 import { getPlanById } from "@/lib/plans-data";
@@ -136,7 +143,7 @@ export function ClaimPlanClient({
       <SiteHeader />
       <SetupFlowStepper currentStep={3} planId={plan.id} areaHint={area} />
       <main className="px-4 pb-16 pt-8 sm:px-6 sm:pb-24 sm:pt-12 lg:px-8">
-        <div className="mx-auto max-w-lg">
+        <div className="mx-auto max-w-2xl">
           <p className="text-sm font-bold uppercase tracking-widest text-brand">
             Step 3 of 4
           </p>
@@ -144,11 +151,12 @@ export function ClaimPlanClient({
             <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-brand-soft text-brand">
               <HugeIcon icon={ZapIcon} size={22} strokeWidth={1.5} />
             </span>
-            Claim it fast
+            Lock it in
           </h1>
           <p className="mt-4 text-base leading-relaxed text-zinc-600">
-            Hit Claim. It&apos;s atomically locked to your group in real time — no
-            double-bookings, ever. (Demo uses your browser session as the lock.)
+            Below you&apos;ll find photos, the map, and what to expect—then claim
+            the plan for your group. Holds update live, so two groups can&apos;t
+            take the same slot. In this demo, your browser session is the hold.
           </p>
 
           {claimBlocked ? (
@@ -160,15 +168,74 @@ export function ClaimPlanClient({
             </div>
           ) : null}
 
-          <div className="mt-8 rounded-2xl border border-zinc-200 bg-zinc-50/90 p-5 shadow-sm">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
-              Plan
-            </p>
-            <p className="font-display mt-1 text-xl font-bold text-zinc-900">
-              {plan.title}
-            </p>
-            <p className="mt-1 text-sm text-zinc-600">{plan.tagline}</p>
-            <p className="mt-3 text-xs font-medium text-zinc-700">{plan.stop}</p>
+          <div className="mt-8 overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
+            <PlanImageGallery plan={plan} variant="hero" priority />
+            <div className="space-y-4 p-5 sm:p-8">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+                  What you&apos;re claiming
+                </p>
+                <p
+                  className={`mt-2 inline-block w-fit rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${plan.metaClass}`}
+                >
+                  {plan.meta.split("·")[0].trim()}
+                </p>
+                <h2 className="font-display mt-2 text-2xl font-bold text-zinc-900">
+                  {plan.title}
+                </h2>
+                <p className="mt-2 text-zinc-600">{plan.tagline}</p>
+              </div>
+              <dl className="grid gap-3 border-t border-zinc-100 pt-4 text-sm sm:grid-cols-2">
+                <div>
+                  <dt className="font-semibold text-zinc-800">Meet</dt>
+                  <dd className="mt-0.5 text-zinc-600">{plan.stop}</dd>
+                </div>
+                <div>
+                  <dt className="font-semibold text-zinc-800">Duration</dt>
+                  <dd className="mt-0.5 text-zinc-600">{plan.duration}</dd>
+                </div>
+                <div>
+                  <dt className="font-semibold text-zinc-800">Group size</dt>
+                  <dd className="mt-0.5 text-zinc-600">{plan.groupLabel} people</dd>
+                </div>
+                <div>
+                  <dt className="font-semibold text-zinc-800">About</dt>
+                  <dd className="mt-0.5 text-zinc-600">{plan.price}</dd>
+                </div>
+                {plan.openingHoursLine ? (
+                  <div className="sm:col-span-2">
+                    <dt className="font-semibold text-zinc-800">Venue hours</dt>
+                    <dd className="mt-0.5 text-zinc-600">{plan.openingHoursLine}</dd>
+                  </div>
+                ) : null}
+              </dl>
+              <PlanMapPreview plan={plan} className="mt-2" variant="go" />
+              {!canShowPlanMapPreview(plan) &&
+              (plan.formattedAddress || plan.mapsUrl || plan.placeLat != null) ? (
+                <a
+                  href={buildGoogleMapsHref(plan)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-brand hover:underline"
+                >
+                  <HugeIcon icon={MapsIcon} size={16} strokeWidth={2} aria-hidden />
+                  Open in Google Maps
+                </a>
+              ) : null}
+              {plan.formattedAddress ? (
+                <p className="mt-2 text-sm text-zinc-600">{plan.formattedAddress}</p>
+              ) : null}
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+                  What to expect
+                </p>
+                <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-zinc-600">
+                  {activityBulletsForDisplay(plan).slice(0, 8).map((line) => (
+                    <li key={line}>{line}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
           </div>
 
           {!plan.available ? (
@@ -229,7 +296,7 @@ export function ClaimPlanClient({
           ) : null}
 
           {existingClaim === plan.id ? (
-            <div className="mt-8 flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-950">
+            <div className="mt-8 flex items-center gap-2 rounded-xl border border-brand/20 bg-brand-soft px-4 py-3 text-sm text-zinc-900">
               <HugeIcon icon={CheckmarkCircle02Icon} size={18} />
               You&apos;ve already locked this plan.{" "}
               <Link

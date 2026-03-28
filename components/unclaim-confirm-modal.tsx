@@ -29,10 +29,10 @@ export function UnclaimConfirmModal({
           id="unclaim-title"
           className="font-display text-xl font-bold text-zinc-900"
         >
-          Unclaim this drop?
+          Release this plan?
         </h2>
         <p className="mt-3 text-sm leading-relaxed text-zinc-700">
-          Your lock is released and this spot goes back to the live pool so
+          Your lock is cleared and this spot goes back to the live pool so
           someone else can claim it. Don&apos;t claim and release over and over
           just to browse venues — repeated releases can briefly pause new claims
           for your session.
@@ -50,7 +50,7 @@ export function UnclaimConfirmModal({
             onClick={onConfirm}
             className="w-full rounded-xl bg-zinc-900 px-4 py-3 text-sm font-bold text-white transition hover:bg-zinc-800 sm:w-auto sm:min-w-[200px]"
           >
-            I understand — unclaim
+            Yes, release it
           </button>
         </div>
       </div>

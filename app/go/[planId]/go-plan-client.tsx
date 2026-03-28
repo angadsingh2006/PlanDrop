@@ -167,7 +167,7 @@ export function GoPlanClient({
           </p>
 
           {isYours ? (
-            <p className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-950">
+            <p className="mt-4 rounded-xl border border-brand/20 bg-brand-soft px-4 py-3 text-sm font-medium text-zinc-900">
               This plan is locked to your group for this session — your crew can
               view the briefing below. Copy the link below so friends see the full
               plan (including AI details).

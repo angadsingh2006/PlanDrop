@@ -40,6 +40,29 @@ export type Plan = {
   locationDetails: string[];
 };
 
+/** Venue-only extras (Wikimedia Commons, CC licenses). Keep each plan’s list scoped to that place. */
+const PONCE_GALLERY_EXTRAS = [
+  "https://upload.wikimedia.org/wikipedia/commons/c/ce/Ponce_City_Market%2C_Atlanta.jpg",
+  "https://upload.wikimedia.org/wikipedia/commons/b/b8/Ponce_City_Market_large_neon_sign_Midtown%2C_Atlanta%2C_GA.jpg",
+  "https://upload.wikimedia.org/wikipedia/commons/3/35/Central_Food_Hall_of_Ponce_City_Market%2C_seen_from_upper_level_at_night.jpg",
+] as const;
+
+const PIEDMONT_GALLERY_EXTRAS = [
+  "https://upload.wikimedia.org/wikipedia/commons/8/8a/Piedmont_Park_Atlanta.jpg",
+  "https://upload.wikimedia.org/wikipedia/commons/6/6b/Morning_view_from_the_Lake_Clara_Meer_Bridge_and_Piedmont_Park_Gazebo.jpg",
+  "https://upload.wikimedia.org/wikipedia/commons/7/7d/999_Peachtree_Building_viewed_from_Lake_Clara_Meer_in_Piedmont_Park%2C_Atlanta.jpg",
+] as const;
+
+const KROG_GALLERY_EXTRAS = [
+  "https://upload.wikimedia.org/wikipedia/commons/a/a7/Krog_Street_Market.jpg",
+] as const;
+
+const STADIUM_GALLERY_EXTRAS = [
+  "https://upload.wikimedia.org/wikipedia/commons/2/29/Mercedes-Benz_Stadium%2C_July_2018.jpg",
+  "https://upload.wikimedia.org/wikipedia/commons/1/14/Mercedes-Benz_Stadium_Pedestrian_Bridge.jpg",
+  "https://upload.wikimedia.org/wikipedia/commons/6/6c/Mercedes-Benz_Stadium%2C_Atlanta%2C_GA_%2846558862285%29.jpg",
+] as const;
+
 export const PLANS: Plan[] = [
   {
     id: "1",
@@ -53,6 +76,10 @@ export const PLANS: Plan[] = [
     coverImageAlt:
       "Ponce City Market exterior with orange awning and signage in Atlanta",
     photoCredit: "Ponce City Market - Atlanta",
+    galleryImageSrcs: [
+      "/images/ponce-city-market.png",
+      ...PONCE_GALLERY_EXTRAS,
+    ],
     placeLat: 33.7721,
     placeLng: -84.3653,
     formattedAddress:
@@ -77,16 +104,15 @@ export const PLANS: Plan[] = [
     tagline: "Lake loop, skyline views, cold coffee after.",
     price: "~$18/pp",
     meta: "ACTIVE · 2–4 PEOPLE · 2 HRS",
-    metaClass: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100",
+    metaClass: "bg-brand-soft text-brand ring-1 ring-brand/20",
     stop: "Piedmont Park — 12th St & Piedmont Ave (8:00 AM)",
     coverImageSrc: "/images/piedmont-park-clara-meer.png",
     coverImageAlt:
       "Lake Clara Meer in Piedmont Park with Midtown Atlanta skyline reflected on the water",
     photoCredit: "Piedmont Park - Atlanta",
-    /** Second local asset for gallery arrows in modals (swap for another park shot if you add one). */
     galleryImageSrcs: [
       "/images/piedmont-park-clara-meer.png",
-      "/images/ponce-city-market.png",
+      ...PIEDMONT_GALLERY_EXTRAS,
     ],
     placeLat: 33.786,
     placeLng: -84.3732,
@@ -96,7 +122,8 @@ export const PLANS: Plan[] = [
     vibe: "active",
     minGroup: 2,
     maxGroup: 4,
-    available: false,
+    available: true,
+    viewing: 8,
     locationDetails: [
       "Circle Lake Clara Meer for a flat, easy loop with skyline reflections.",
       "Spread out on open lawns or use the active oval for a light jog.",
@@ -117,6 +144,7 @@ export const PLANS: Plan[] = [
     coverImageAlt:
       "Krog Street Market exterior at dusk with patio, signage, and parking in front",
     photoCredit: "Krog Street Market - Atlanta",
+    galleryImageSrcs: ["/images/krog-street-market.png", ...KROG_GALLERY_EXTRAS],
     placeLat: 33.752,
     placeLng: -84.3644,
     formattedAddress: "99 Krog St NE, Atlanta, GA 30307, USA",
@@ -126,6 +154,7 @@ export const PLANS: Plan[] = [
     minGroup: 4,
     maxGroup: 4,
     available: true,
+    viewing: 9,
     locationDetails: [
       "Share small plates from different vendors so nobody has to pick one restaurant.",
       "Post up on the covered patio or high-top rails for a social, low-pressure dinner.",
@@ -146,6 +175,10 @@ export const PLANS: Plan[] = [
     coverImageAlt:
       "Aerial view of Mercedes-Benz Stadium with closed retractable roof and Mercedes star on the facade",
     photoCredit: "Mercedes-Benz Stadium - Atlanta",
+    galleryImageSrcs: [
+      "/images/mercedes-benz-stadium.png",
+      ...STADIUM_GALLERY_EXTRAS,
+    ],
     placeLat: 33.7554,
     placeLng: -84.4008,
     formattedAddress: "1 AMB Dr NW, Atlanta, GA 30313, USA",
@@ -155,6 +188,7 @@ export const PLANS: Plan[] = [
     minGroup: 2,
     maxGroup: 4,
     available: true,
+    viewing: 6,
     locationDetails: [
       "Walk the plaza and take in the pinwheel roof and Mercedes star facade.",
       "On event days, soak up pregame energy; off-days, quiet architecture photos.",

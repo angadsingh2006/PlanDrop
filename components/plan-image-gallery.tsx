@@ -13,7 +13,7 @@ const wrapClass: Record<Variant, string> = {
   card: "relative aspect-[5/3] w-full overflow-hidden rounded-t-2xl bg-zinc-100",
   hero: "relative aspect-[21/9] w-full bg-zinc-100 sm:aspect-[2.5/1]",
   modal:
-    "relative h-full min-h-[200px] w-full overflow-hidden bg-zinc-100",
+    "relative h-full min-h-0 w-full overflow-hidden bg-zinc-100",
 };
 
 const btnClass: Record<Variant, string> = {

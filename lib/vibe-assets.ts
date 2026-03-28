@@ -5,7 +5,7 @@ export function metaClassForVibe(vibe: VibeId): string {
     case "chill":
       return "bg-indigo-50 text-indigo-700 ring-1 ring-indigo-100";
     case "active":
-      return "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100";
+      return "bg-brand-soft text-brand ring-1 ring-brand/20";
     case "foodie":
       return "bg-amber-50 text-amber-800 ring-1 ring-amber-100";
     case "adv":

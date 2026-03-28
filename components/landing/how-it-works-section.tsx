@@ -22,8 +22,8 @@ const steps = [
   },
   {
     icon: ZapIcon,
-    title: "Claim it fast",
-    body: "Hit Claim. It's atomically locked to your group in real-time — no double-bookings, ever.",
+    title: "Lock it in",
+    body: "Review the plan and tap Claim—your group gets a live hold, so no one double-books the same slot.",
     href: "/plans#plans",
   },
   {

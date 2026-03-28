@@ -1,24 +1,5 @@
 import Link from "next/link";
-
-function LogoMark({ className }: { className?: string }) {
-  return (
-    <span className={`flex items-center gap-2 ${className ?? ""}`}>
-      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-brand text-white shadow-sm">
-        <svg
-          className="h-4 w-4"
-          viewBox="0 0 24 24"
-          fill="currentColor"
-          aria-hidden
-        >
-          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
-        </svg>
-      </span>
-      <span className="font-display text-xl font-semibold tracking-[-0.02em] text-brand">
-        PlanDrop
-      </span>
-    </span>
-  );
-}
+import { BrandLogoMark } from "@/components/brand-logo";
 
 const nav = [
   ["/how-it-works", "How it works"],
@@ -32,7 +13,7 @@ export function SiteHeader() {
     <header className="pointer-events-none sticky top-0 z-50 border-b border-zinc-100 bg-white/90 backdrop-blur-md">
       <div className="mx-auto flex h-[72px] max-w-7xl items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
         <Link href="/" className="pointer-events-auto min-w-0 shrink-0">
-          <LogoMark />
+          <BrandLogoMark variant="header" />
         </Link>
 
         <nav

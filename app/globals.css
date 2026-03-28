@@ -2,12 +2,41 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Single source of truth for PlanDrop brand (#2B53C1 family). Tailwind `brand*` reads these. */
 @layer base {
+  :root {
+    --brand-rgb: 43 83 193;
+    --brand-hover-rgb: 36 73 168;
+    --brand-soft-rgb: 233 237 248;
+    /* Lighter blue for gradients (same hue as brand, not Tailwind `blue-400` cyan) */
+    --brand-light-rgb: 91 124 232;
+  }
   html {
     scroll-behavior: smooth;
   }
   ::selection {
     @apply bg-brand-soft text-zinc-900;
+  }
+}
+
+@keyframes hero-word-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.12em);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.hero-rotating-word {
+  animation: hero-word-in 0.5s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-rotating-word {
+    animation: none;
   }
 }
 
