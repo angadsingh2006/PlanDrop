@@ -51,6 +51,7 @@ export function ClaimPlanClient({
   const [existingClaim, setExistingClaim] = useState<string | null>(null);
   const [banModalOpen, setBanModalOpen] = useState(false);
   const [claimBlocked, setClaimBlocked] = useState(false);
+  const [poolNow, setPoolNow] = useState(() => Date.now());
 
   const globalClaimed = usePlanClaims();
   const isClaimedByAnyone = plan ? globalClaimed.has(plan.id) : false;
@@ -67,7 +68,6 @@ export function ClaimPlanClient({
     return () => window.clearInterval(id);
   }, []);
 
-  const [poolNow, setPoolNow] = useState(() => Date.now());
   useEffect(() => {
     const id = window.setInterval(() => setPoolNow(Date.now()), 5000);
     return () => window.clearInterval(id);
