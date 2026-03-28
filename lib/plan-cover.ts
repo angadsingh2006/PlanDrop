@@ -1,11 +1,5 @@
 import type { Plan } from "@/lib/plans-data";
 
-function planHasGooglePlacePhotos(plan: Plan): boolean {
-  const refs = plan.placePhotoRefs?.filter((r) => r?.trim()) ?? [];
-  if (refs.length > 0) return true;
-  return Boolean(plan.placePhotoRef?.trim());
-}
-
 /** Disambiguates Next/Image and CDN caches so each card stays tied to its plan. */
 function placePhotoSrc(planId: string, ref: string): string {
   const r = ref.trim();
@@ -25,39 +19,38 @@ export function planCoverImageUrl(plan: Plan): string {
 
 /** All images to show on the plan briefing (Places refs, then local fallbacks). */
 export function planGalleryImageUrls(plan: Plan): { src: string; alt: string }[] {
+  const out: { src: string; alt: string }[] = [];
+  const seen = new Set<string>();
+  const push = (src: string, alt: string) => {
+    const k = src.trim();
+    if (!k || seen.has(k)) return;
+    seen.add(k);
+    out.push({ src: k, alt });
+  };
+
   const refs = plan.placePhotoRefs?.filter((r) => r?.trim()) ?? [];
   if (refs.length > 0) {
-    return refs.map((ref, i) => ({
-      src: placePhotoSrc(plan.id, ref),
-      alt: i === 0 ? plan.coverImageAlt : `${plan.coverImageAlt} (${i + 1})`,
-    }));
+    refs.forEach((ref, i) => {
+      push(
+        placePhotoSrc(plan.id, ref),
+        i === 0 ? plan.coverImageAlt : `${plan.coverImageAlt} (${i + 1})`,
+      );
+    });
+  } else if (plan.placePhotoRef?.trim()) {
+    push(placePhotoSrc(plan.id, plan.placePhotoRef), plan.coverImageAlt);
   }
-  if (plan.placePhotoRef?.trim()) {
-    return [
-      {
-        src: placePhotoSrc(plan.id, plan.placePhotoRef),
-        alt: plan.coverImageAlt,
-      },
-    ];
-  }
-  const locals = plan.galleryImageSrcs?.filter((s) => s?.trim()) ?? [];
-  if (locals.length > 0) {
-    return locals.map((src, i) => ({
-      src: src.trim(),
-      alt: i === 0 ? plan.coverImageAlt : `${plan.coverImageAlt} (${i + 1})`,
-    }));
-  }
-  if (plan.id.startsWith("ai-") && !planHasGooglePlacePhotos(plan)) {
-    return [];
-  }
-  return [{ src: plan.coverImageSrc, alt: plan.coverImageAlt }];
-}
 
-/** Count of gallery images (for badges). */
-export function planPhotoCount(plan: Plan): number {
-  if (plan.placePhotoRefs?.length) return plan.placePhotoRefs.length;
-  if (plan.placePhotoRef?.trim()) return 1;
-  if (plan.galleryImageSrcs?.length) return plan.galleryImageSrcs.length;
-  if (plan.id.startsWith("ai-") && !planHasGooglePlacePhotos(plan)) return 0;
-  return 1;
+  const locals = plan.galleryImageSrcs?.filter((s) => s?.trim()) ?? [];
+  locals.forEach((src) => {
+    const idx = out.length;
+    push(
+      src.trim(),
+      idx === 0 ? plan.coverImageAlt : `${plan.coverImageAlt} (${idx + 1})`,
+    );
+  });
+
+  if (out.length === 0) {
+    push(plan.coverImageSrc, plan.coverImageAlt);
+  }
+  return out;
 }

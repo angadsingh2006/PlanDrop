@@ -27,7 +27,8 @@ import {
 } from "@/lib/claim-storage";
 import { buildGoogleMapsHref } from "@/lib/maps-links";
 import { activityBulletsForDisplay } from "@/lib/plan-display";
-import { planToSnapshot, snapshotToPlan } from "@/lib/plan-snapshot";
+import { buildClaimShareQuery, buildGoShareQuery } from "@/lib/claim-links";
+import { planFromUrlPayload } from "@/lib/plan-snapshot";
 import type { Plan } from "@/lib/plans-data";
 
 export function GoPlanClient({
@@ -35,11 +36,13 @@ export function GoPlanClient({
   staticPlan,
   areaHint,
   snapshotFromQuery,
+  zFromQuery,
 }: {
   planId: string;
   staticPlan: Plan | null;
   areaHint: string | null;
   snapshotFromQuery: string | null;
+  zFromQuery: string | null;
 }) {
   const router = useRouter();
   const [plan, setPlan] = useState<Plan | null>(staticPlan);
@@ -61,10 +64,10 @@ export function GoPlanClient({
       setResolved(true);
       return;
     }
-    const fromSnap = snapshotFromQuery ? snapshotToPlan(snapshotFromQuery) : null;
-    if (fromSnap && fromSnap.id === planId) {
-      setPlan(fromSnap);
-      mergeAiPlanIntoStorage(fromSnap);
+    const fromPayload = planFromUrlPayload(snapshotFromQuery, zFromQuery);
+    if (fromPayload && fromPayload.id === planId) {
+      setPlan(fromPayload);
+      mergeAiPlanIntoStorage(fromPayload);
       setResolved(true);
       return;
     }
@@ -75,16 +78,14 @@ export function GoPlanClient({
       return;
     }
     setResolved(true);
-  }, [planId, staticPlan, snapshotFromQuery]);
+  }, [planId, staticPlan, snapshotFromQuery, zFromQuery]);
 
   useEffect(() => {
     if (!plan || typeof window === "undefined") return;
-    const u = new URL(window.location.href);
-    if (plan.id.startsWith("ai-")) {
-      u.searchParams.set("snapshot", planToSnapshot(plan));
-      if (areaHint?.trim()) u.searchParams.set("area", areaHint.trim());
-    }
-    setShareUrl(u.toString());
+    const origin = window.location.origin;
+    const rad = getStoredRadiusMiles();
+    const qs = buildGoShareQuery(plan, areaHint, rad);
+    setShareUrl(qs ? `${origin}/go/${plan.id}?${qs}` : `${origin}/go/${plan.id}`);
     setClaimId(getClaimedPlanId());
   }, [plan, areaHint]);
 
@@ -210,11 +211,14 @@ export function GoPlanClient({
             <p className="mt-4 rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-700">
               Preview mode: anyone with this link can see the briefing.{" "}
               <Link
-                href={
-                  plan.id.startsWith("ai-") && areaHint?.trim()
-                    ? `/claim/${plan.id}?area=${encodeURIComponent(areaHint.trim())}&snapshot=${encodeURIComponent(planToSnapshot(plan))}`
-                    : `/claim/${plan.id}`
-                }
+                href={(() => {
+                  const qs = buildClaimShareQuery(
+                    plan,
+                    areaHint,
+                    getStoredRadiusMiles(),
+                  );
+                  return qs ? `/claim/${plan.id}?${qs}` : `/claim/${plan.id}`;
+                })()}
                 className="font-semibold text-brand underline"
               >
                 Claim it first

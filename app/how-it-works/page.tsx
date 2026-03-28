@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { HowItWorksPageDetail } from "@/components/landing/how-it-works-page-detail";
 import { HowItWorksSection } from "@/components/landing/how-it-works-section";
 import { SiteFooter } from "@/components/landing/site-footer";
 import { SiteHeader } from "@/components/landing/site-header";
@@ -37,6 +38,7 @@ export default function HowItWorksPage() {
             </Link>
           </div>
         </section>
+        <HowItWorksPageDetail />
         <HowItWorksSection />
       </main>
       <SiteFooter />

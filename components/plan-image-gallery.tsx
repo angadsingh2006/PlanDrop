@@ -86,6 +86,8 @@ export function PlanImageGallery({
         : "(max-width: 768px) 100vw, 672px";
 
   const isProxyPhoto = current.src.includes("/api/place-photo");
+  const isRemoteHttp =
+    current.src.startsWith("https://") || current.src.startsWith("http://");
 
   const placeholderCopy =
     variant === "card"
@@ -110,7 +112,7 @@ export function PlanImageGallery({
           className={`object-cover ${variant === "card" ? "transition-transform duration-500 group-hover:scale-[1.02]" : ""}`}
           sizes={sizes}
           priority={priority ?? active === 0}
-          unoptimized={isProxyPhoto}
+          unoptimized={isProxyPhoto || isRemoteHttp}
           onError={() =>
             setFailedSrcs((prev) => new Set(prev).add(current.src))
           }

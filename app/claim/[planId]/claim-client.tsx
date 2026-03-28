@@ -32,7 +32,7 @@ import { buildGoHref } from "@/lib/claim-links";
 import { buildGoogleMapsHref } from "@/lib/maps-links";
 import { activityBulletsForDisplay } from "@/lib/plan-display";
 import { isPlanPoolExpired } from "@/lib/plan-pool-expiry";
-import { planToSnapshot, snapshotToPlan } from "@/lib/plan-snapshot";
+import { planFromUrlPayload } from "@/lib/plan-snapshot";
 import type { Plan } from "@/lib/plans-data";
 import { getPlanById } from "@/lib/plans-data";
 
@@ -41,11 +41,13 @@ export function ClaimPlanClient({
   staticPlan,
   areaFromQuery,
   snapshotFromQuery,
+  zFromQuery,
 }: {
   planId: string;
   staticPlan: Plan | null;
   areaFromQuery: string | null;
   snapshotFromQuery: string | null;
+  zFromQuery: string | null;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -90,10 +92,10 @@ export function ClaimPlanClient({
       setResolved(true);
       return;
     }
-    const fromSnap = snapshotFromQuery ? snapshotToPlan(snapshotFromQuery) : null;
-    if (fromSnap && fromSnap.id === planId) {
-      setPlan(fromSnap);
-      mergeAiPlanIntoStorage(fromSnap);
+    const fromPayload = planFromUrlPayload(snapshotFromQuery, zFromQuery);
+    if (fromPayload && fromPayload.id === planId) {
+      setPlan(fromPayload);
+      mergeAiPlanIntoStorage(fromPayload);
       setResolved(true);
       return;
     }
@@ -104,7 +106,7 @@ export function ClaimPlanClient({
       return;
     }
     setResolved(true);
-  }, [planId, staticPlan, snapshotFromQuery]);
+  }, [planId, staticPlan, snapshotFromQuery, zFromQuery]);
 
   const area = areaFromQuery ?? getStoredArea() ?? "Atlanta, GA";
   const radiusMiles = getStoredRadiusMiles();
@@ -145,6 +147,7 @@ export function ClaimPlanClient({
 
     setClaimedPlanId(plan.id);
     setClaiming(false);
+    mergeAiPlanIntoStorage(plan);
     router.push(buildGoHref(plan, area, radiusMiles));
   }
 

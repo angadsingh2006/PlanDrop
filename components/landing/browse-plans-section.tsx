@@ -6,7 +6,6 @@ import {
   Clock03Icon,
   EyeIcon,
   FilterIcon,
-  Image01Icon,
   Leaf01Icon,
   Location01Icon,
   MapsIcon,
@@ -31,7 +30,6 @@ import { buildClaimHref, buildGoHref } from "@/lib/claim-links";
 import { buildGoogleMapsHref } from "@/lib/maps-links";
 import { PlanMapPreview } from "@/components/plan-map-preview";
 import { activityBulletsForDisplay } from "@/lib/plan-display";
-import { planPhotoCount } from "@/lib/plan-cover";
 import {
   formatPoolTimeRemaining,
 } from "@/lib/plan-pool-expiry";
@@ -51,7 +49,7 @@ import {
   parseRadiusMilesParam,
 } from "@/lib/search-radius";
 import type { Plan } from "@/lib/plans-data";
-import { PLANS, getPlanById } from "@/lib/plans-data";
+import { PLANS, TOP_PLACES_CATALOG, getPlanById } from "@/lib/plans-data";
 
 const filters: {
   id: string;
@@ -351,7 +349,6 @@ function PlanCardRightBadges({
     return () => window.clearInterval(id);
   }, []);
 
-  const photoCount = planPhotoCount(plan);
   const viewers = useLiveViewingCount(
     plan.id,
     eligible && plan.viewing != null ? plan.viewing : undefined,
@@ -364,11 +361,10 @@ function PlanCardRightBadges({
       ? formatPoolTimeRemaining(plan.poolExpiresAt, poolNow)
       : null;
 
-  const showGallery = photoCount > 1;
   const showViewers = viewers != null;
   const showPool = poolLeft != null;
 
-  if (!showGallery && !showViewers && !showPool) return null;
+  if (!showViewers && !showPool) return null;
 
   const pill =
     "inline-flex items-center gap-1 rounded-full bg-black/45 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white ring-1 ring-white/25 backdrop-blur-sm tabular-nums";
@@ -382,12 +378,6 @@ function PlanCardRightBadges({
         >
           <HugeIcon icon={Clock03Icon} size={10} aria-hidden />
           {poolLeft}
-        </span>
-      ) : null}
-      {showGallery ? (
-        <span className={pill}>
-          <HugeIcon icon={Image01Icon} size={10} aria-hidden />
-          {photoCount}
         </span>
       ) : null}
       {showViewers ? (
@@ -434,12 +424,16 @@ function BrowsePlansSectionInner() {
     if (urlArea) {
       setStoredArea(urlArea);
       setStorageArea("");
-    } else {
-      setStorageArea(getStoredArea()?.trim() ?? "");
+      return;
     }
-  }, [urlArea]);
+    if (isHomePage) {
+      setStorageArea("");
+      return;
+    }
+    setStorageArea(getStoredArea()?.trim() ?? "");
+  }, [urlArea, isHomePage]);
 
-  const areaTrim = urlArea || storageArea;
+  const areaTrim = urlArea || (isHomePage ? "" : storageArea);
 
   useEffect(() => {
     if (areaTrim) setStoredRadiusMiles(radiusMiles);
@@ -448,15 +442,15 @@ function BrowsePlansSectionInner() {
   const claimedId = useClaimedPlanId();
   const globalClaimed = usePlanClaims();
 
-  /** No `?area=` and no saved search: show the static Atlanta demo catalog honestly. */
-  const isDemoCatalog = !areaTrim;
-  const areaLabel = useMemo(
-    () =>
-      isDemoCatalog
-        ? formatAreaDisplay("Atlanta, GA")
-        : formatAreaDisplay(areaTrim),
-    [areaTrim, isDemoCatalog],
-  );
+  /** /plans with no area — Atlanta demo. Homepage uses TOP_PLACES_CATALOG instead. */
+  const isDemoCatalog = !isHomePage && !areaTrim;
+  const areaLabel = useMemo(() => {
+    if (isHomePage) {
+      return "major cities worldwide";
+    }
+    if (isDemoCatalog) return formatAreaDisplay("Atlanta, GA");
+    return formatAreaDisplay(areaTrim);
+  }, [isHomePage, isDemoCatalog, areaTrim]);
 
   const [active, setActive] = useState<string>("all");
   const [detailPlan, setDetailPlan] = useState<Plan | null>(null);
@@ -473,9 +467,10 @@ function BrowsePlansSectionInner() {
   }, []);
 
   useEffect(() => {
-    if (!areaTrim) {
+    if (isHomePage || !areaTrim) {
       setAiPlans(null);
       setAiError(null);
+      setAiLoading(false);
       return;
     }
     let cancelled = false;
@@ -526,9 +521,12 @@ function BrowsePlansSectionInner() {
     return () => {
       cancelled = true;
     };
-  }, [areaTrim, radiusMiles]);
+  }, [areaTrim, radiusMiles, isHomePage]);
 
   const boardPlans = useMemo(() => {
+    if (isHomePage) {
+      return TOP_PLACES_CATALOG;
+    }
     if (!areaTrim) {
       return PLANS;
     }
@@ -544,37 +542,40 @@ function BrowsePlansSectionInner() {
       });
     }
     return [];
-  }, [areaTrim, aiPlans, aiLoading, poolNow, globalClaimed]);
+  }, [isHomePage, areaTrim, aiPlans, aiLoading, poolNow, globalClaimed]);
+
+  /** Globally claimed plans stay in the pool for timers but are hidden from the grid. */
+  const visibleBoardPlans = useMemo(
+    () => boardPlans.filter((p) => !globalClaimed.has(p.id)),
+    [boardPlans, globalClaimed],
+  );
 
   const filteredPlans = useMemo(
-    () => boardPlans.filter((p) => planMatchesFilter(p, active)),
-    [boardPlans, active],
+    () => visibleBoardPlans.filter((p) => planMatchesFilter(p, active)),
+    [visibleBoardPlans, active],
   );
 
-  const openTonight = useMemo(
-    () => boardPlans.filter((p) => !globalClaimed.has(p.id)).length,
-    [boardPlans, globalClaimed],
-  );
+  const openTonight = visibleBoardPlans.length;
 
-  const firstOpenPlan = useMemo(
-    () => boardPlans.find((p) => !globalClaimed.has(p.id)) ?? null,
-    [boardPlans, globalClaimed],
-  );
+  const firstOpenPlan = visibleBoardPlans[0] ?? null;
 
-  const areaForLinks = areaTrim || null;
+  const areaForLinks = isHomePage ? null : areaTrim || null;
 
   const openTonightBanner = useMemo(() => {
-    if (aiLoading && areaTrim) {
+    if (!isHomePage && aiLoading && areaTrim) {
       return { mode: "loading" as const };
     }
     if (areaTrim && boardPlans.length === 0) {
       return { mode: "none" as const };
     }
-    if (openTonight === 0) {
+    if (openTonight === 0 && boardPlans.length > 0) {
       return { mode: "all_claimed" as const };
     }
+    if (openTonight === 0) {
+      return { mode: "none" as const };
+    }
     return { mode: "open" as const, n: openTonight };
-  }, [aiLoading, areaTrim, boardPlans.length, openTonight]);
+  }, [isHomePage, aiLoading, areaTrim, boardPlans.length, openTonight]);
 
   const lockedPlan = useMemo(() => {
     if (!claimedId) return null;
@@ -606,36 +607,36 @@ function BrowsePlansSectionInner() {
   }
 
   async function handleUnclaimConfirm() {
-  setUnclaimOpen(false);
+    setUnclaimOpen(false);
 
-  if (claimedId) {
-    await fetch("/api/unclaim-plan", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        planId: claimedId,
-        sessionId: getSessionId(),
-      }),
-    });
-  }
+    if (claimedId) {
+      await fetch("/api/unclaim-plan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          planId: claimedId,
+          sessionId: getSessionId(),
+        }),
+      });
+    }
 
-  const r = releaseClaim();
-  if (r.banned) {
-    setBanModalOpen(true);
+    const r = releaseClaim();
+    if (r.banned) {
+      setBanModalOpen(true);
+      setDetailPlan(null);
+      return;
+    }
+    if (r.strikeAfter === 1) {
+      window.alert(
+        "Got it. Releasing too many times in a row can temporarily block new claims — we want real plans, not venue scouting.",
+      );
+    } else if (r.strikeAfter === 2) {
+      window.alert(
+        "Second release this session. One more release and new claims pause for 5 minutes to stop repeat scouting.",
+      );
+    }
     setDetailPlan(null);
-    return;
   }
-  if (r.strikeAfter === 1) {
-    window.alert(
-      "Got it. Releasing too many times in a row can temporarily block new claims — we want real plans, not venue scouting.",
-    );
-  } else if (r.strikeAfter === 2) {
-    window.alert(
-      "Second release this session. One more release and new claims pause for 5 minutes to stop repeat scouting.",
-    );
-  }
-  setDetailPlan(null);
-}
 
   return (
     <>
@@ -740,19 +741,32 @@ function BrowsePlansSectionInner() {
                 Live in {areaLabel}
               </p>
               <h2 className="font-display mt-2 text-3xl font-bold tracking-[-0.03em] text-zinc-900 sm:text-4xl">
-                Available plans tonight
+                {isHomePage ? "Tonight's picks, ready now" : "Available plans tonight"}
               </h2>
               {aiError ? (
                 <p className="mt-2 text-sm font-medium text-amber-800">{aiError}</p>
               ) : null}
-              {isDemoCatalog ? (
+              {isHomePage ? (
+                <p className="mt-2 max-w-prose text-xs leading-relaxed text-zinc-500 sm:text-sm">
+                  Real venues you&apos;ve heard of—no AI on this board. Search your city
+                  above or open{" "}
+                  <Link
+                    href="/plans"
+                    className="font-semibold text-zinc-600 underline decoration-zinc-300 underline-offset-2 hover:text-brand"
+                  >
+                    Browse plans
+                  </Link>{" "}
+                  for fresh ideas generated for your area (short wait while we build
+                  them).
+                </p>
+              ) : isDemoCatalog ? (
                 <p className="mt-2 text-xs text-zinc-500">
                   Demo stops are in Atlanta. Search above to generate plans for your
                   city.
                 </p>
               ) : null}
             </div>
-            {boardPlans.length > 0 ? (
+            {visibleBoardPlans.length > 0 ? (
               <div className="flex flex-wrap items-center gap-3 sm:mt-8">
                 <Link
                   href={
@@ -762,7 +776,7 @@ function BrowsePlansSectionInner() {
                   }
                   className="shrink-0 self-start text-sm font-semibold text-zinc-900 underline decoration-zinc-400 underline-offset-4 transition hover:decoration-brand hover:text-brand"
                 >
-                  Show all {boardPlans.length} plans →
+                  Show all {visibleBoardPlans.length} plans →
                 </Link>
                 {areaTrim ? (
                   <label className="inline-flex h-10 items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 text-sm font-semibold text-zinc-700 shadow-sm sm:px-3.5">
@@ -853,7 +867,7 @@ function BrowsePlansSectionInner() {
           </div>
 
           <div className="relative grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {aiLoading && areaTrim ? (
+            {!isHomePage && aiLoading && areaTrim ? (
               <div className="col-span-full flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-brand/30 bg-brand-soft/20 px-6 py-12 text-center">
                 <span className="h-8 w-8 animate-spin rounded-full border-2 border-brand border-t-transparent" />
                 <p className="text-sm font-semibold text-zinc-800">
@@ -869,7 +883,7 @@ function BrowsePlansSectionInner() {
               </p>
             ) : null}
             {!aiLoading &&
-            boardPlans.length > 0 &&
+            visibleBoardPlans.length > 0 &&
             filteredPlans.length === 0 ? (
               <p className="col-span-full rounded-xl border border-dashed border-zinc-200 bg-zinc-50 px-5 py-10 text-center text-sm text-zinc-600">
                 No plans match this filter. Try{" "}
@@ -881,6 +895,13 @@ function BrowsePlansSectionInner() {
                   all vibes
                 </button>{" "}
                 or another option.
+              </p>
+            ) : null}
+            {!aiLoading && boardPlans.length > 0 && visibleBoardPlans.length === 0 ? (
+              <p className="col-span-full rounded-xl border border-dashed border-zinc-200 bg-zinc-50 px-5 py-10 text-center text-sm text-zinc-600">
+                Every visible drop in this pool is claimed right now. When someone releases a
+                plan, it reappears here with the same countdown. You can also try another city
+                from the top of the page.
               </p>
             ) : null}
             {!aiLoading &&

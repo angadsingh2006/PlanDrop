@@ -29,8 +29,9 @@ export default function Home() {
             </p>
             <HeroHeadline />
             <p className="mx-auto mt-6 max-w-xl text-base leading-relaxed text-zinc-600 sm:text-lg">
-              Enter your city or turn on location—browse plans you can claim in
-              one tap. No spreadsheet. No group-chat meltdown.
+              Browse famous spots below, or search your city for AI-built plans
+              for your crew. Claim in one tap—no spreadsheet, no group-chat
+              meltdown.
             </p>
             <HeroLocationSearch />
           </div>
@@ -82,32 +83,47 @@ export default function Home() {
           </Link>
         </section>
 
-        {/* Gradient CTA */}
-        <section className="px-4 pb-0 pt-4 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-5xl overflow-hidden rounded-t-[2.5rem] bg-brand px-6 py-20 text-center shadow-2xl sm:px-12 sm:py-24 relative">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,_var(--tw-gradient-stops))] from-brand-light via-brand to-brand-hover opacity-80" />
-            <div className="relative">
-              <h2 className="font-display text-3xl font-bold leading-snug tracking-[-0.02em] text-white sm:text-5xl">
+        {/* CTA — floating card (full rounding + margin) so it doesn’t flush to the viewport edge */}
+        <section className="px-4 pb-12 pt-6 sm:px-6 sm:pb-16 sm:pt-8 lg:px-8">
+          <div className="relative mx-auto max-w-3xl overflow-hidden rounded-3xl border border-white/10 bg-brand shadow-[0_24px_80px_-12px_rgba(43,83,193,0.45)] ring-1 ring-black/5 sm:rounded-[2rem]">
+            <div
+              className="pointer-events-none absolute inset-0 opacity-[0.35]"
+              style={{
+                backgroundImage: `radial-gradient(circle at 1px 1px, rgba(255,255,255,0.14) 1px, transparent 0)`,
+                backgroundSize: "24px 24px",
+              }}
+              aria-hidden
+            />
+            <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-brand-light/30 blur-3xl" aria-hidden />
+            <div className="pointer-events-none absolute -bottom-32 -left-16 h-80 w-80 rounded-full bg-brand-hover/25 blur-3xl" aria-hidden />
+            <div className="relative px-6 py-16 text-center sm:px-12 sm:py-20 lg:py-24">
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-white/70">
+                Worldwide · tonight
+              </p>
+              <h2 className="font-display mt-4 text-3xl font-bold leading-[1.15] tracking-[-0.03em] text-white sm:text-4xl lg:text-5xl">
                 Your group&apos;s next move is waiting.
               </h2>
-              <p className="mx-auto mt-6 max-w-xl text-base text-white/90 sm:text-lg">
-                Stop the &ldquo;what do you want to do?&rdquo; loop. Drop in now.
-              </p>
-              <Link
-                href="/#hero-locate"
-                className="mt-10 inline-flex items-center justify-center gap-2 rounded-full bg-white px-10 py-5 text-lg font-bold text-brand shadow-xl transition-all hover:scale-105 hover:bg-zinc-50 hover:shadow-2xl"
-              >
-                Find plans near you
-                <span aria-hidden>→</span>
-              </Link>
-              <p className="mt-6 text-sm font-medium text-white/80">
-                No sign-up. No payment. Just show up.
+              <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+                <Link
+                  href="/#hero-locate"
+                  className="inline-flex w-full max-w-xs items-center justify-center gap-2 rounded-full bg-white px-10 py-4 text-base font-bold text-brand shadow-lg transition hover:bg-zinc-50 hover:shadow-xl sm:w-auto sm:py-5 sm:text-lg"
+                >
+                  Find plans near you
+                  <span aria-hidden>→</span>
+                </Link>
+                <Link
+                  href="/plans"
+                  className="text-sm font-semibold text-white/90 underline decoration-white/40 underline-offset-4 transition hover:text-white hover:decoration-white"
+                >
+                  Browse all plans
+                </Link>
+              </div>
+              <p className="mt-8 text-sm text-white/75">
+                No sign-up · No payment · <span className="italic text-white/90">ready to drop</span>
               </p>
             </div>
           </div>
         </section>
-
-        <div className="h-3 bg-gradient-to-r from-brand-light via-brand to-brand-hover" aria-hidden />
       </main>
 
       <SiteFooter />

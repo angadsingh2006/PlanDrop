@@ -109,21 +109,40 @@ function toPlan(raw: ClaudePlan, index: number): Plan {
   };
 }
 
+function vibeGalleryFallbacks(plan: Plan, planIndex: number): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  const push = (src: string) => {
+    const t = src.trim();
+    if (!t || seen.has(t)) return;
+    seen.add(t);
+    out.push(t);
+  };
+  push(plan.coverImageSrc);
+  for (let k = 1; k <= 4 && out.length < 4; k++) {
+    push(coverForVibe(plan.vibe, planIndex + k).src);
+  }
+  return out;
+}
+
 async function enrichPlanWithGooglePlace(
   plan: Plan,
   primaryPlaceName: string,
   area: string,
   aiPriceEstimate: string,
+  planIndex: number,
   lat?: number,
   lng?: number,
   radiusMeters?: number,
 ): Promise<Plan> {
   if (!process.env.GOOGLE_PLACES_API_KEY?.trim()) {
-    return plan;
+    return { ...plan, galleryImageSrcs: vibeGalleryFallbacks(plan, planIndex) };
   }
 
   const placeQuery = primaryPlaceName.trim();
-  if (!placeQuery) return plan;
+  if (!placeQuery) {
+    return { ...plan, galleryImageSrcs: vibeGalleryFallbacks(plan, planIndex) };
+  }
 
   const loc =
     lat != null && lng != null && Number.isFinite(lat) && Number.isFinite(lng)
@@ -147,7 +166,7 @@ async function enrichPlanWithGooglePlace(
   }
 
   if (!place) {
-    return plan;
+    return { ...plan, galleryImageSrcs: vibeGalleryFallbacks(plan, planIndex) };
   }
 
   const time = timeFromStop(plan.stop);
@@ -183,7 +202,7 @@ async function enrichPlanWithGooglePlace(
       mergedRefs.push(t);
     }
   }
-  const refs = mergedRefs.slice(0, 12);
+  const refs = mergedRefs.slice(0, 15);
 
   const formattedAddress =
     detailsExtra?.formattedAddress?.trim() || place.formattedAddress;
@@ -209,6 +228,14 @@ async function enrichPlanWithGooglePlace(
     if (refs.length > 1) {
       next.placePhotoRefs = refs;
     }
+    const extras = vibeGalleryFallbacks(plan, planIndex)
+      .filter((s) => s !== plan.coverImageSrc)
+      .slice(0, 3);
+    if (extras.length) {
+      next.galleryImageSrcs = extras;
+    }
+  } else {
+    next.galleryImageSrcs = vibeGalleryFallbacks(plan, planIndex);
   }
 
   return next;
@@ -315,6 +342,7 @@ STRICT RULES (must follow):
         raw.primaryPlaceName || "",
         trimmedArea,
         raw.priceEstimate || "~$35/pp",
+        i,
         lat,
         lng,
         radiusMetersForPlaces,

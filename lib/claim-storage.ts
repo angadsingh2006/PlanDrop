@@ -1,6 +1,7 @@
 /** Client-only session keys for the demo claim flow (no server yet). */
 
-import type { Plan } from "@/lib/plans-data";
+import { getPlanById, type Plan } from "@/lib/plans-data";
+import { planToSnapshot } from "@/lib/plan-snapshot";
 import {
   clampRadiusMiles,
   DEFAULT_RADIUS_MILES,
@@ -8,11 +9,23 @@ import {
 
 export const AREA_KEY = "plandrop_area";
 export const CLAIM_KEY = "plandrop_claim_plan_id";
+/** `{ planId, claimedAtMs }` — cleared when the session claim is released. */
+export const CLAIM_META_KEY = "plandrop_claim_meta";
 export const PIN_KEY = "plandrop_pin";
 /** Set when user searches by ZIP/city/location so /drop can skip to browse. */
 export const SKIP_DROP_KEY = "plandrop_skip_drop";
 export const RADIUS_MILES_KEY = "plandrop_radius_miles";
 export const AI_PLANS_MAP_KEY = "plandrop_ai_plans_map";
+const PAST_CLAIMS_KEY = "plandrop_past_claims";
+const MAX_PAST_CLAIMS = 40;
+
+export type PastClaimRecord = {
+  planId: string;
+  snapshot: string;
+  area: string | null;
+  claimedAtMs: number;
+  releasedAtMs: number;
+};
 /** Count of “release plan” actions this session (claim → release cycles). */
 export const RELEASE_STRIKE_KEY = "plandrop_release_strikes";
 export const CLAIM_BAN_UNTIL_KEY = "plandrop_claim_ban_until";
@@ -84,6 +97,10 @@ export function setClaimedPlanId(planId: string): void {
   if (typeof window === "undefined") return;
   try {
     sessionStorage.setItem(CLAIM_KEY, planId);
+    sessionStorage.setItem(
+      CLAIM_META_KEY,
+      JSON.stringify({ planId, claimedAtMs: Date.now() }),
+    );
     notifyClaimChanged();
   } catch {
     /* ignore */
@@ -94,10 +111,78 @@ export function clearClaimedPlanId(): void {
   if (typeof window === "undefined") return;
   try {
     sessionStorage.removeItem(CLAIM_KEY);
+    sessionStorage.removeItem(CLAIM_META_KEY);
     notifyClaimChanged();
   } catch {
     /* ignore */
   }
+}
+
+export function getClaimMeta(): { planId: string; claimedAtMs: number } | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(CLAIM_META_KEY);
+    if (!raw) return null;
+    const m = JSON.parse(raw) as { planId?: string; claimedAtMs?: number };
+    if (typeof m.planId !== "string" || typeof m.claimedAtMs !== "number") {
+      return null;
+    }
+    return { planId: m.planId, claimedAtMs: m.claimedAtMs };
+  } catch {
+    return null;
+  }
+}
+
+function readPastClaimsRaw(): PastClaimRecord[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = sessionStorage.getItem(PAST_CLAIMS_KEY);
+    if (!raw) return [];
+    const arr = JSON.parse(raw) as unknown;
+    if (!Array.isArray(arr)) return [];
+    return arr.filter(
+      (e): e is PastClaimRecord =>
+        e != null &&
+        typeof e === "object" &&
+        typeof (e as PastClaimRecord).planId === "string" &&
+        typeof (e as PastClaimRecord).snapshot === "string" &&
+        typeof (e as PastClaimRecord).claimedAtMs === "number" &&
+        typeof (e as PastClaimRecord).releasedAtMs === "number",
+    );
+  } catch {
+    return [];
+  }
+}
+
+export function getPastClaims(): PastClaimRecord[] {
+  return readPastClaimsRaw().sort((a, b) => b.releasedAtMs - a.releasedAtMs);
+}
+
+function appendPastClaim(entry: PastClaimRecord): void {
+  if (typeof window === "undefined") return;
+  try {
+    const prev = readPastClaimsRaw();
+    const next = [entry, ...prev].slice(0, MAX_PAST_CLAIMS);
+    sessionStorage.setItem(PAST_CLAIMS_KEY, JSON.stringify(next));
+    window.dispatchEvent(new CustomEvent("plandrop-past-claims-change"));
+  } catch {
+    /* ignore */
+  }
+}
+
+function recordPastClaimBeforeRelease(planId: string): void {
+  const plan = getPlanById(planId) ?? getStoredAiPlan(planId);
+  if (!plan) return;
+  const meta = getClaimMeta();
+  const claimedAtMs =
+    meta?.planId === planId ? meta.claimedAtMs : Date.now();
+  appendPastClaim({
+    planId,
+    snapshot: planToSnapshot(plan),
+    area: getStoredArea(),
+    claimedAtMs,
+    releasedAtMs: Date.now(),
+  });
 }
 
 function getReleaseStrikeCount(): number {
@@ -149,6 +234,10 @@ export function getRemainingBanMs(): number {
 }
 
 export function releaseClaim(): { banned: boolean; strikeAfter: number } {
+  const releasingId = getClaimedPlanId();
+  if (releasingId) {
+    recordPastClaimBeforeRelease(releasingId);
+  }
   const next = getReleaseStrikeCount() + 1;
   setReleaseStrikeCount(next);
   clearClaimedPlanId();

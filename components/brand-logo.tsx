@@ -9,12 +9,12 @@ export function BrandLogoMark({
   variant: "header" | "footer";
   className?: string;
 }) {
-  const isHeader = variant === "header";
+  const onLight = variant === "header" || variant === "footer";
   return (
     <span className={`flex items-center gap-2 ${className ?? ""}`}>
       <span
         className={`flex h-9 w-9 items-center justify-center rounded-full ${
-          isHeader
+          onLight
             ? "bg-brand text-white shadow-sm"
             : "bg-white text-brand"
         }`}
@@ -28,9 +28,7 @@ export function BrandLogoMark({
       </span>
       <span
         className={`font-display font-semibold tracking-[-0.02em] ${
-          isHeader
-            ? "text-xl text-brand"
-            : "text-lg text-white"
+          onLight ? "text-xl text-brand" : "text-lg text-white"
         }`}
       >
         PlanDrop

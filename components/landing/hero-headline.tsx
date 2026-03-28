@@ -7,7 +7,7 @@ const SUFFIXES = [
   "tonight?",
   "this weekend?",
   "after work?",
-  "for real?",
+  "with the crew?",
 ] as const;
 
 const TYPING_MS = 72;

@@ -1,4 +1,4 @@
-import { PLANS } from "@/lib/plans-data";
+import { TOP_PLACES_CATALOG } from "@/lib/plans-data";
 
 function parseDurationHours(duration: string): number {
   const m = duration.trim().match(/(\d+(?:\.\d+)?)\s*hrs?/i);
@@ -12,9 +12,9 @@ function cityFromPhotoCredit(photoCredit: string): string {
   return last && last.length > 0 ? last : "Unknown";
 }
 
-/** Stats derived from the live catalog — updates when `PLANS` changes. */
+/** Stats derived from the homepage spotlight board (`TOP_PLACES_CATALOG`). */
 export function getHomepageStats() {
-  const plans = PLANS;
+  const plans = TOP_PLACES_CATALOG;
   const plansLiveToday = plans.length;
   const cities = new Set(plans.map((p) => cityFromPhotoCredit(p.photoCredit)));
   const citiesDropping = plans.length === 0 ? 0 : cities.size;

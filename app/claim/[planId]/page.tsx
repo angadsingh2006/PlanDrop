@@ -5,7 +5,7 @@ import { getPlanById } from "@/lib/plans-data";
 
 type Props = {
   params: Promise<{ planId: string }>;
-  searchParams: Promise<{ area?: string; snapshot?: string }>;
+  searchParams: Promise<{ area?: string; snapshot?: string; z?: string }>;
 };
 
 export async function generateMetadata({
@@ -24,7 +24,11 @@ export async function generateMetadata({
 
 export default async function ClaimPlanPage({ params, searchParams }: Props) {
   const { planId } = await params;
-  const { area: areaFromQuery, snapshot: snapshotFromQuery } = await searchParams;
+  const {
+    area: areaFromQuery,
+    snapshot: snapshotFromQuery,
+    z: zFromQuery,
+  } = await searchParams;
   const staticPlan = getPlanById(planId);
 
   return (
@@ -34,6 +38,7 @@ export default async function ClaimPlanPage({ params, searchParams }: Props) {
         staticPlan={staticPlan ?? null}
         areaFromQuery={areaFromQuery ?? null}
         snapshotFromQuery={snapshotFromQuery ?? null}
+        zFromQuery={zFromQuery ?? null}
       />
     </Suspense>
   );

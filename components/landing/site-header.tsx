@@ -49,10 +49,10 @@ export function SiteHeader() {
             </div>
           </details>
           <Link
-            href="/drop"
+            href="/claims"
             className="pointer-events-auto inline-flex items-center gap-1 rounded-full bg-brand px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-brand/20 transition-all hover:-translate-y-0.5 hover:bg-brand-hover hover:shadow-brand/30 sm:px-5"
           >
-            Drop in
+            Your Claims
             <span aria-hidden>→</span>
           </Link>
         </div>
